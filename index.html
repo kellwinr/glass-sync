@@ -434,7 +434,7 @@
     <div class="keyboard-legend">
         <span><span class="key-badge">Space</span> Play/Pause</span>
         <span><span class="key-badge">⬇</span> Sync Next</span>
-        <span><span class="key-badge">⬆</span> Undo Prev</span>
+        <span><span class="key-badge">⬆</span> Undo/Reset</span>
         <span><span class="key-badge">⬅ / ➡</span> -0.1s / +0.1s Adjustment</span>
     </div>
 </div>
@@ -674,18 +674,39 @@
         showStatus("Synced! ⬇");
     }
 
+    // UPDATED: True Undo / Reset Previous Line
     function triggerUndoPrev() {
         if (currentFocusIndex > 0) {
-            currentFocusIndex--;
-            if (lyrics[currentFocusIndex].start !== null) {
-                audio.currentTime = lyrics[currentFocusIndex].start;
+            currentFocusIndex--; // Move back
+
+            const line = lyrics[currentFocusIndex];
+            
+            // 1. Rewind to start of this line (so user can catch the beat again)
+            if (line.start !== null) {
+                audio.currentTime = line.start;
             }
+
+            // 2. Wipe Data
+            line.start = null;
+            line.end = null;
+
+            // 3. Reset Visuals (Remove Sync State)
+            const lineEl = document.getElementById(`line-${currentFocusIndex}`);
+            const timeEl = document.getElementById(`time-${currentFocusIndex}`);
+            
+            if (lineEl) {
+                lineEl.classList.remove('synced'); // Remove green styling
+            }
+            if (timeEl) {
+                timeEl.innerText = "--:--"; // Reset text
+            }
+
             updateFocusUI();
-            showStatus("Retry Line ⬆");
+            showStatus("Undone & Rewound ↺");
         }
     }
     
-    // Updated Nudge Logic: Seeks Audio
+    // Nudge Logic
     function nudgeTimestamp(amount) {
         if(currentFocusIndex >= lyrics.length) return;
         const line = lyrics[currentFocusIndex];
@@ -693,12 +714,10 @@
         if(line.start !== null) {
             line.start = Math.max(0, line.start + amount);
             
-            // Adjust end of previous line too
             if (currentFocusIndex > 0 && lyrics[currentFocusIndex - 1].start !== null) {
                 lyrics[currentFocusIndex - 1].end = line.start;
             }
             
-            // CRITICAL: Update Audio Position
             audio.currentTime = line.start;
 
             updateLineVisuals(currentFocusIndex);
@@ -748,21 +767,17 @@
         const ct = audio.currentTime;
         timeDisplay.innerText = formatTimeDisplay(ct);
 
-        // Preview Mode Logic
         if (previewMode) {
             lyrics.forEach((line, index) => {
                 const kLine = document.getElementById(`k-line-${index}`);
                 if (!kLine) return;
                 
-                // Determine if this line is active
-                // Active if: Time >= Start AND (Time < NextStart OR No Next Line)
                 const isStarted = line.start !== null && ct >= line.start;
                 const nextLine = lyrics[index + 1];
                 const isEnded = nextLine && nextLine.start !== null ? ct >= nextLine.start : false;
 
                 if (isStarted && !isEnded) {
                     if (!kLine.classList.contains('active')) {
-                        // Clear others
                         document.querySelectorAll('.karaoke-line').forEach(el => el.classList.remove('active'));
                         kLine.classList.add('active');
                         kLine.scrollIntoView({ behavior: "smooth", block: "center" });
