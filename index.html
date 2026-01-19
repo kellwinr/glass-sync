@@ -685,15 +685,22 @@
         }
     }
     
+    // Updated Nudge Logic: Seeks Audio
     function nudgeTimestamp(amount) {
         if(currentFocusIndex >= lyrics.length) return;
         const line = lyrics[currentFocusIndex];
         
         if(line.start !== null) {
             line.start = Math.max(0, line.start + amount);
+            
+            // Adjust end of previous line too
             if (currentFocusIndex > 0 && lyrics[currentFocusIndex - 1].start !== null) {
                 lyrics[currentFocusIndex - 1].end = line.start;
             }
+            
+            // CRITICAL: Update Audio Position
+            audio.currentTime = line.start;
+
             updateLineVisuals(currentFocusIndex);
             showStatus(amount > 0 ? "+0.1s ➡" : "⬅ -0.1s");
         } else {
