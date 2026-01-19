@@ -60,6 +60,7 @@
             justify-content: space-between;
             align-items: center;
             z-index: 20;
+            flex-shrink: 0; /* Prevent header from shrinking */
         }
 
         .header-left { display: flex; flex-direction: column; gap: 5px; }
@@ -97,6 +98,7 @@
             align-items: center;
             background: rgba(0, 0, 0, 0.1);
             z-index: 20;
+            flex-shrink: 0; /* Prevent controls from shrinking */
         }
 
         .file-inputs { display: flex; gap: 15px; align-items: center; }
@@ -166,9 +168,10 @@
         /* Workspace */
         .workspace {
             display: flex;
-            flex: 1;
+            flex: 1; /* This takes up all remaining space */
             overflow: hidden;
             position: relative;
+            min-height: 0; /* Important for nested flex scrolling */
         }
 
         .editor-pane, .preview-pane {
@@ -200,7 +203,7 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
-            padding-bottom: 200px;
+            padding-bottom: 50px; /* Reduced padding since legend is no longer overlapping */
         }
 
         .line-item {
@@ -214,6 +217,7 @@
             justify-content: space-between;
             align-items: center;
             position: relative;
+            flex-shrink: 0;
         }
 
         .line-item.current-focus {
@@ -352,13 +356,11 @@
             z-index: 200;
         }
 
-        /* Keyboard Legend */
+        /* Keyboard Legend - FIXED */
         .keyboard-legend {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 10px;
+            /* Removed absolute positioning */
+            width: 100%;
+            padding: 10px 0; /* Padding top/bottom */
             background: rgba(0, 0, 0, 0.2);
             backdrop-filter: blur(5px);
             display: flex;
@@ -368,6 +370,8 @@
             color: rgba(255, 255, 255, 0.6);
             border-top: 1px solid rgba(255, 255, 255, 0.1);
             z-index: 20;
+            flex-shrink: 0; /* Ensure it stays fixed height at bottom */
+            box-sizing: border-box;
         }
         .key-badge {
             background: rgba(255, 255, 255, 0.15);
@@ -605,7 +609,6 @@
                 </div>
             `;
             
-            // Sync Focus Click
             div.addEventListener('click', (e) => {
                 if (e.target.classList.contains('line-text') || e.target.classList.contains('delete-line-btn')) return;
                 
@@ -616,14 +619,12 @@
                 }
             });
 
-            // Edit Text
             const textSpan = div.querySelector('.line-text');
             textSpan.addEventListener('input', (e) => {
                 lyrics[index].text = e.target.innerText;
             });
             textSpan.addEventListener('keydown', (e) => { e.stopPropagation(); });
 
-            // Delete Line
             const delBtn = div.querySelector('.delete-line-btn');
             delBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -659,7 +660,6 @@
             }
         }
         
-        // Restore synced status visuals
         lyrics.forEach((line, idx) => {
             if (line.start !== null) updateLineVisuals(idx);
         });
@@ -721,7 +721,7 @@
              lyrics[0].start = 0;
              audio.currentTime = 0;
              updateLineVisuals(0);
-             currentFocusIndex = 1; // Move to next
+             currentFocusIndex = 1; 
              updateFocusUI();
              showStatus("Synced 0s!");
              return;
