@@ -10,6 +10,7 @@
             --glass-border: rgba(255, 255, 255, 0.2);
             --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
             --accent-color: #0a84ff;
+            --danger-color: #ff453a;
             --text-color: #ffffff;
             --active-line-bg: rgba(10, 132, 255, 0.6);
             --synced-line-bg: rgba(50, 215, 75, 0.15);
@@ -41,6 +42,7 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            position: relative;
             animation: fadeIn 0.8s ease-out;
         }
 
@@ -57,6 +59,9 @@
             justify-content: space-between;
             align-items: center;
         }
+
+        .header-left { display: flex; flex-direction: column; gap: 5px; }
+        .header-right { display: flex; gap: 10px; }
 
         h1 { margin: 0; font-size: 1.2rem; font-weight: 600; letter-spacing: 0.5px; }
 
@@ -119,20 +124,13 @@
             transform: translateY(-1px);
         }
 
-        .btn-primary {
-            background: var(--accent-color);
-            border: none;
-            font-weight: 500;
-        }
-
+        .btn-primary { background: var(--accent-color); border: none; font-weight: 500; }
         .btn-primary:hover { background: #0071e3; }
+        
+        .btn-danger { background: rgba(255, 69, 58, 0.2); border-color: rgba(255, 69, 58, 0.5); }
+        .btn-danger:hover { background: rgba(255, 69, 58, 0.6); }
 
-        .btn-sync {
-            background: #32d74b;
-            border: none;
-            color: #000;
-            font-weight: 600;
-        }
+        .btn-sync { background: #32d74b; border: none; color: #000; font-weight: 600; }
         .btn-sync:hover { background: #28cd41; }
 
         /* Playback Controls */
@@ -156,6 +154,7 @@
             display: flex;
             flex: 1;
             overflow: hidden;
+            position: relative;
         }
 
         .editor-pane, .preview-pane {
@@ -187,7 +186,7 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
-            padding-bottom: 200px; /* Large padding for scrolling */
+            padding-bottom: 200px;
         }
 
         .line-item {
@@ -203,7 +202,6 @@
             position: relative;
         }
 
-        /* Use this class for the line currently being edited/waited on */
         .line-item.current-focus {
             background: var(--active-line-bg);
             border-color: rgba(255, 255, 255, 0.5);
@@ -212,11 +210,29 @@
             z-index: 2;
         }
 
-        /* Use this class for lines that are already done */
         .line-item.synced {
             border-left: 4px solid #32d74b;
             background: var(--synced-line-bg);
             opacity: 0.7;
+        }
+
+        /* Editable Text Styling */
+        .line-text {
+            flex: 1;
+            margin-right: 15px;
+            outline: none;
+            border-bottom: 1px solid transparent;
+            transition: border 0.2s;
+        }
+        
+        .line-text:hover { border-bottom: 1px solid rgba(255,255,255,0.3); }
+
+        .line-text:focus {
+            border-bottom: 1px solid var(--accent-color);
+            background: rgba(0,0,0,0.1);
+            border-radius: 4px;
+            padding: 2px 4px;
+            margin-left: -4px;
         }
 
         .timestamp-tag {
@@ -225,6 +241,7 @@
             padding: 4px 8px;
             border-radius: 6px;
             opacity: 0.7;
+            user-select: none;
         }
 
         /* Scrollbar Styling */
@@ -236,7 +253,7 @@
         /* Status & Tooltip */
         .status-msg {
             position: absolute;
-            bottom: 20px;
+            bottom: 60px;
             left: 50%;
             transform: translateX(-50%);
             background: rgba(0, 0, 0, 0.6);
@@ -248,13 +265,38 @@
             transition: opacity 0.3s;
             z-index: 10;
         }
+
+        /* Keyboard Legend */
+        .keyboard-legend {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(5px);
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.6);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .key-badge {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: white;
+            font-weight: 600;
+            margin-right: 5px;
+        }
     </style>
 </head>
 <body>
 
 <div class="glass-container">
     <header>
-        <div style="display:flex; flex-direction:column; gap:5px;">
+        <div class="header-left">
             <h1>GlassSync</h1>
             <div class="file-meta-display" id="fileMeta">
                 <span class="meta-tag">📄 <span id="metaName">Song.mp3</span></span>
@@ -262,7 +304,10 @@
                 <span class="meta-tag">⏱ <span id="metaDuration">00:00</span></span>
             </div>
         </div>
-        <button class="btn btn-primary" id="downloadBtn" disabled>Download SRT</button>
+        <div class="header-right">
+            <button class="btn btn-danger" id="fullResetBtn">🗑️ Clear All</button>
+            <button class="btn btn-primary" id="downloadBtn" disabled>Download SRT</button>
+        </div>
     </header>
 
     <div class="controls">
@@ -275,16 +320,16 @@
         </div>
         
         <div class="playback-bar">
-            <button class="btn" id="prevLineBtn" title="Go back to previous line and retry">⬆️ Undo / Prev</button>
-            <button class="btn btn-primary" id="playBtn">▶ Play</button>
-            <button class="btn btn-sync" id="nextLineBtn" title="Sync current timestamp and move to next">✅ Sync / Next</button>
+            <button class="btn" id="prevLineBtn" title="Previous Line (Arrow Up/Left)">⬆️ Undo</button>
+            <button class="btn btn-primary" id="playBtn" title="Play/Pause (Space)">▶ Play</button>
+            <button class="btn btn-sync" id="nextLineBtn" title="Next Line (Arrow Down/Right)">✅ Sync / Next</button>
             <div class="time-display" id="timeDisplay">00:00.00</div>
         </div>
     </div>
 
     <div class="workspace">
         <div class="editor-pane" id="editorPane">
-            <textarea id="rawLyrics" placeholder="1. Upload Audio&#10;2. Paste Lyrics Here&#10;3. Click 'Load Lyrics'&#10;4. Press Play and use the 'Sync/Next' button to tap along!"></textarea>
+            <textarea id="rawLyrics" placeholder="1. Upload Audio&#10;2. Paste Lyrics Here&#10;3. Click 'Load Lyrics'&#10;4. Press Play&#10;5. Use Arrow Keys to Sync!"></textarea>
         </div>
 
         <div class="preview-pane" id="syncPane" style="display: none;">
@@ -293,6 +338,12 @@
     </div>
 
     <div class="status-msg" id="statusMsg">Synced!</div>
+
+    <div class="keyboard-legend">
+        <span><span class="key-badge">Space</span> Play/Pause</span>
+        <span><span class="key-badge">⬇ / ➡</span> Sync Next</span>
+        <span><span class="key-badge">⬆ / ⬅</span> Undo Prev</span>
+    </div>
 </div>
 
 <script>
@@ -301,31 +352,30 @@
     let lyrics = []; 
     let isPlaying = false;
     let syncMode = false;
-    let currentFocusIndex = 0; // Tracks which line is currently "Ready to Sync"
+    let currentFocusIndex = 0; 
 
     // DOM Elements
     const audioInput = document.getElementById('audioInput');
     const rawLyrics = document.getElementById('rawLyrics');
     const loadLyricsBtn = document.getElementById('loadLyricsBtn');
+    const fullResetBtn = document.getElementById('fullResetBtn');
     const editorPane = document.getElementById('editorPane');
     const syncPane = document.getElementById('syncPane');
     const linesContainer = document.getElementById('linesContainer');
     const playBtn = document.getElementById('playBtn');
     const timeDisplay = document.getElementById('timeDisplay');
     const downloadBtn = document.getElementById('downloadBtn');
-    
-    // Updated Button Refs
     const prevLineBtn = document.getElementById('prevLineBtn');
     const nextLineBtn = document.getElementById('nextLineBtn');
     const statusMsg = document.getElementById('statusMsg');
-
-    // Metadata Elements
+    
+    // Metadata
     const fileMeta = document.getElementById('fileMeta');
     const metaName = document.getElementById('metaName');
     const metaFormat = document.getElementById('metaFormat');
     const metaDuration = document.getElementById('metaDuration');
 
-    // 1. Audio Loading & Metadata
+    // 1. Audio Loading
     audioInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -349,6 +399,11 @@
 
     // 2. Lyrics Processing
     loadLyricsBtn.addEventListener('click', () => {
+        if (syncMode) {
+            resetSyncState();
+            return;
+        }
+
         const text = rawLyrics.value.trim();
         if (!text) return alert("Please paste some lyrics first.");
 
@@ -368,8 +423,48 @@
         editorPane.style.display = 'none';
         syncPane.style.display = 'flex';
         syncMode = true;
-        loadLyricsBtn.innerText = "🔄 Reset";
+        loadLyricsBtn.innerText = "🔄 Restart Sync";
     });
+
+    // NEW: Full Reset
+    fullResetBtn.addEventListener('click', () => {
+        if(!confirm("Are you sure you want to clear the audio and lyrics?")) return;
+
+        audio.pause();
+        audio.src = "";
+        audioInput.value = ""; 
+        isPlaying = false;
+        
+        rawLyrics.value = "";
+        lyrics = [];
+        
+        fileMeta.style.display = 'none';
+        linesContainer.innerHTML = '';
+        editorPane.style.display = 'flex';
+        syncPane.style.display = 'none';
+        syncMode = false;
+        loadLyricsBtn.innerText = "📝 Load Lyrics";
+        downloadBtn.disabled = true;
+        updatePlayButton();
+        timeDisplay.innerText = "00:00.00";
+        
+        showStatus("Cleared All!");
+    });
+
+    function resetSyncState() {
+        audio.pause();
+        audio.currentTime = 0;
+        isPlaying = false;
+        updatePlayButton();
+        timeDisplay.innerText = "00:00.00";
+        
+        currentFocusIndex = 0;
+        lyrics.forEach(l => { l.start = null; l.end = null; });
+        
+        renderSyncLines();
+        updateFocusUI();
+        showStatus("Restarted!");
+    }
 
     // 3. Render Interface
     function renderSyncLines() {
@@ -378,31 +473,37 @@
             const div = document.createElement('div');
             div.className = 'line-item';
             div.id = `line-${index}`;
+            
             div.innerHTML = `
-                <span class="text">${line.text}</span>
+                <span class="line-text" contenteditable="true" id="text-${index}">${line.text}</span>
                 <span class="timestamp-tag" id="time-${index}">--:--</span>
             `;
             
-            // Manual click to jump focus to this line
-            div.addEventListener('click', () => {
+            div.addEventListener('click', (e) => {
+                if (e.target.classList.contains('line-text')) return;
+                
                 currentFocusIndex = index;
                 updateFocusUI();
-                // Optionally seek audio if this line was already synced
                 if(lyrics[index].start !== null) {
                     audio.currentTime = lyrics[index].start;
                 }
+            });
+
+            const textSpan = div.querySelector('.line-text');
+            textSpan.addEventListener('input', (e) => {
+                lyrics[index].text = e.target.innerText;
+            });
+            textSpan.addEventListener('keydown', (e) => {
+                e.stopPropagation(); 
             });
             
             linesContainer.appendChild(div);
         });
     }
 
-    // 4. Update Visual Focus (The blue highlight)
     function updateFocusUI() {
-        // Remove focus from all
         document.querySelectorAll('.line-item').forEach(el => el.classList.remove('current-focus'));
         
-        // Add focus to current
         if (currentFocusIndex < lyrics.length) {
             const el = document.getElementById(`line-${currentFocusIndex}`);
             if (el) {
@@ -412,13 +513,11 @@
         }
     }
 
-    // 5. The Core Sync Logic (Button Controlled)
-    
-    // "NEXT / SYNC" Button
+    // 4. Sync Logic
     function triggerSyncNext() {
         if (!audio.src) return alert("Please upload an MP3 first.");
+        
         if (!isPlaying && lyrics[currentFocusIndex]?.start === null) {
-             // Optional: Auto-play if not playing on first sync
              audio.play();
              isPlaying = true;
              updatePlayButton();
@@ -427,49 +526,38 @@
         if (currentFocusIndex >= lyrics.length) return;
 
         const currentTime = audio.currentTime;
-
-        // 1. Set Start Time for Current
         lyrics[currentFocusIndex].start = currentTime;
 
-        // 2. Set End Time for Previous (if exists)
         if (currentFocusIndex > 0 && lyrics[currentFocusIndex - 1].start !== null) {
             lyrics[currentFocusIndex - 1].end = currentTime;
         }
 
-        // 3. Update UI for the just-synced line
         const lineEl = document.getElementById(`line-${currentFocusIndex}`);
         const timeEl = document.getElementById(`time-${currentFocusIndex}`);
         lineEl.classList.add('synced');
         timeEl.innerText = formatTimeDisplay(currentTime);
 
-        // 4. Move Focus Forward
         currentFocusIndex++;
         updateFocusUI();
 
         downloadBtn.disabled = false;
-        // Small feedback
         showStatus("Synced! ⬇");
     }
 
-    // "PREV / UNDO" Button
     function triggerUndoPrev() {
         if (currentFocusIndex > 0) {
-            // 1. Move focus back
             currentFocusIndex--;
             
-            // 2. Seek audio to the start of this line (so user can retry)
-            // If it was synced, we use that time. If not, we don't seek.
             if (lyrics[currentFocusIndex].start !== null) {
                 audio.currentTime = lyrics[currentFocusIndex].start;
             }
 
-            // 3. Update Visuals
             updateFocusUI();
             showStatus("Retry Line ⬆");
         }
     }
 
-    // 6. Controls & Events
+    // 5. Controls & Events
     nextLineBtn.addEventListener('click', triggerSyncNext);
     prevLineBtn.addEventListener('click', triggerUndoPrev);
 
@@ -494,8 +582,11 @@
         }
     }
 
-    // Keyboard Shortcuts
+    // --- KEYBOARD LISTENERS ---
     document.addEventListener('keydown', (e) => {
+        // If user is editing text, don't use shortcuts
+        if (e.target.isContentEditable) return;
+
         if (!syncMode) return;
 
         // Space: Play/Pause
@@ -503,24 +594,23 @@
             e.preventDefault();
             playBtn.click();
         }
-        // Down/Right: Sync Next
+        // Down / Right: Sync Next
         if (e.code === 'ArrowDown' || e.code === 'ArrowRight') {
-            e.preventDefault();
+            e.preventDefault(); // Prevent page scroll
             triggerSyncNext();
         }
-        // Up/Left: Undo Prev
+        // Up / Left: Undo Prev
         if (e.code === 'ArrowUp' || e.code === 'ArrowLeft') {
-            e.preventDefault();
+            e.preventDefault(); // Prevent page scroll
             triggerUndoPrev();
         }
     });
 
-    // 7. Time Update (Just for display now, Sync is manual)
     audio.addEventListener('timeupdate', () => {
         timeDisplay.innerText = formatTimeDisplay(audio.currentTime);
     });
 
-    // 8. SRT Generation
+    // 6. SRT Generation
     downloadBtn.addEventListener('click', () => {
         let srtContent = "";
         let counter = 1;
@@ -529,7 +619,6 @@
             if (line.start === null) return; 
 
             const start = line.start;
-            // If end is null (last line), add 3 seconds default
             const end = line.end !== null ? line.end : (line.start + 3);
 
             srtContent += `${counter}\n`;
@@ -547,7 +636,6 @@
         URL.revokeObjectURL(url);
     });
 
-    // Utilities
     function formatTimeDisplay(seconds) {
         const min = Math.floor(seconds / 60);
         const sec = Math.floor(seconds % 60);
