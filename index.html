@@ -263,7 +263,6 @@
             user-select: none;
         }
 
-        /* Delete Button */
         .delete-line-btn {
             background: transparent;
             border: none;
@@ -274,9 +273,7 @@
             line-height: 1;
             transition: color 0.2s;
         }
-        .delete-line-btn:hover {
-            color: var(--danger-color);
-        }
+        .delete-line-btn:hover { color: var(--danger-color); }
 
         /* PREVIEW OVERLAY (Karaoke Mode) */
         .preview-overlay {
@@ -298,9 +295,7 @@
             transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
 
-        .preview-overlay.active {
-            transform: translateY(0);
-        }
+        .preview-overlay.active { transform: translateY(0); }
 
         .preview-header {
             position: fixed;
@@ -316,7 +311,7 @@
             flex-direction: column;
             gap: 30px;
             text-align: center;
-            padding-bottom: 200px; /* space for scrolling */
+            padding-bottom: 200px;
         }
 
         .karaoke-line {
@@ -415,8 +410,7 @@
         <div class="preview-header">
             <button class="btn" id="closePreviewBtn">❌ Close Preview</button>
         </div>
-        <div class="karaoke-container" id="karaokeContainer">
-            </div>
+        <div class="karaoke-container" id="karaokeContainer"></div>
     </div>
 
     <div class="controls">
@@ -456,7 +450,7 @@
     <div class="keyboard-legend">
         <span><span class="key-badge">Space</span> Play/Pause</span>
         <span><span class="key-badge">⬇</span> Sync Next</span>
-        <span><span class="key-badge">⬆</span> Undo/Reset</span>
+        <span><span class="key-badge">⬆</span> Undo / First Line: Sync 0s</span>
         <span><span class="key-badge">⬅ / ➡</span> -0.1s / +0.1s Adjustment</span>
     </div>
 </div>
@@ -595,7 +589,7 @@
         showStatus("Restarted!");
     }
 
-    // 3. Render Editor Interface (Updated for Delete)
+    // 3. Render Editor Interface
     function renderSyncLines() {
         linesContainer.innerHTML = '';
         lyrics.forEach((line, index) => {
@@ -622,14 +616,14 @@
                 }
             });
 
-            // Edit Text Listener
+            // Edit Text
             const textSpan = div.querySelector('.line-text');
             textSpan.addEventListener('input', (e) => {
                 lyrics[index].text = e.target.innerText;
             });
             textSpan.addEventListener('keydown', (e) => { e.stopPropagation(); });
 
-            // Delete Listener
+            // Delete Line
             const delBtn = div.querySelector('.delete-line-btn');
             delBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -639,30 +633,19 @@
             linesContainer.appendChild(div);
         });
     }
-    
-    // Feature: Delete Line
+
     function deleteLine(index) {
-        // Remove from data array
         lyrics.splice(index, 1);
-        
-        // Adjust focus index
         if (index < currentFocusIndex) {
             currentFocusIndex--;
         } else if (index === currentFocusIndex) {
-            // Stay at current index (which is now the next element), but check bounds
             if (currentFocusIndex >= lyrics.length) {
                 currentFocusIndex = Math.max(0, lyrics.length - 1);
             }
         }
-        
-        // Re-render
         renderSyncLines();
         updateFocusUI();
-        
-        // If we deleted the only line
-        if(lyrics.length === 0) {
-            downloadBtn.disabled = true;
-        }
+        if(lyrics.length === 0) downloadBtn.disabled = true;
     }
 
     function updateFocusUI() {
@@ -676,7 +659,7 @@
             }
         }
         
-        // Restore synced status visuals for existing lines
+        // Restore synced status visuals
         lyrics.forEach((line, idx) => {
             if (line.start !== null) updateLineVisuals(idx);
         });
@@ -724,7 +707,6 @@
         }
 
         updateLineVisuals(currentFocusIndex);
-
         currentFocusIndex++;
         updateFocusUI();
 
@@ -732,13 +714,24 @@
         showStatus("Synced! ⬇");
     }
 
-    // True Undo / Reset Previous Line
+    // Undo / First Line Logic
     function triggerUndoPrev() {
+        // SPECIAL CASE: First Line -> Sync to 0s
+        if (currentFocusIndex === 0) {
+             lyrics[0].start = 0;
+             audio.currentTime = 0;
+             updateLineVisuals(0);
+             currentFocusIndex = 1; // Move to next
+             updateFocusUI();
+             showStatus("Synced 0s!");
+             return;
+        }
+
+        // STANDARD CASE: Undo
         if (currentFocusIndex > 0) {
             currentFocusIndex--; 
 
             const line = lyrics[currentFocusIndex];
-            
             if (line.start !== null) {
                 audio.currentTime = line.start;
             }
@@ -750,13 +743,8 @@
             // Reset Visuals
             const lineEl = document.getElementById(`line-${currentFocusIndex}`);
             const timeEl = document.getElementById(`time-${currentFocusIndex}`);
-            
-            if (lineEl) {
-                lineEl.classList.remove('synced');
-            }
-            if (timeEl) {
-                timeEl.innerText = "--:--";
-            }
+            if (lineEl) lineEl.classList.remove('synced');
+            if (timeEl) timeEl.innerText = "--:--";
 
             updateFocusUI();
             showStatus("Undone & Rewound ↺");
@@ -769,13 +757,10 @@
         
         if(line.start !== null) {
             line.start = Math.max(0, line.start + amount);
-            
             if (currentFocusIndex > 0 && lyrics[currentFocusIndex - 1].start !== null) {
                 lyrics[currentFocusIndex - 1].end = line.start;
             }
-            
             audio.currentTime = line.start;
-
             updateLineVisuals(currentFocusIndex);
             showStatus(amount > 0 ? "+0.1s ➡" : "⬅ -0.1s");
         } else {
@@ -792,7 +777,7 @@
         }
     }
 
-    // 6. Controls & Playback Loop
+    // 6. Controls & Playback
     nextLineBtn.addEventListener('click', triggerSyncNext);
     prevLineBtn.addEventListener('click', triggerUndoPrev);
     nudgeBackBtn.addEventListener('click', () => nudgeTimestamp(-0.1));
