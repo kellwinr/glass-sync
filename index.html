@@ -247,6 +247,13 @@
             margin-left: -4px;
         }
 
+        /* Right Side Meta Group */
+        .line-meta-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
         .timestamp-tag {
             font-size: 0.75rem;
             background: rgba(0, 0, 0, 0.3);
@@ -254,6 +261,21 @@
             border-radius: 6px;
             opacity: 0.7;
             user-select: none;
+        }
+
+        /* Delete Button */
+        .delete-line-btn {
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0 5px;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+        .delete-line-btn:hover {
+            color: var(--danger-color);
         }
 
         /* PREVIEW OVERLAY (Karaoke Mode) */
@@ -573,7 +595,7 @@
         showStatus("Restarted!");
     }
 
-    // 3. Render Editor Interface
+    // 3. Render Editor Interface (Updated for Delete)
     function renderSyncLines() {
         linesContainer.innerHTML = '';
         lyrics.forEach((line, index) => {
@@ -583,11 +605,15 @@
             
             div.innerHTML = `
                 <span class="line-text" contenteditable="true" id="text-${index}">${line.text}</span>
-                <span class="timestamp-tag" id="time-${index}">--:--</span>
+                <div class="line-meta-group">
+                    <span class="timestamp-tag" id="time-${index}">--:--</span>
+                    <button class="delete-line-btn" title="Delete this line">×</button>
+                </div>
             `;
             
+            // Sync Focus Click
             div.addEventListener('click', (e) => {
-                if (e.target.classList.contains('line-text')) return;
+                if (e.target.classList.contains('line-text') || e.target.classList.contains('delete-line-btn')) return;
                 
                 currentFocusIndex = index;
                 updateFocusUI();
@@ -596,28 +622,64 @@
                 }
             });
 
+            // Edit Text Listener
             const textSpan = div.querySelector('.line-text');
             textSpan.addEventListener('input', (e) => {
                 lyrics[index].text = e.target.innerText;
             });
-            textSpan.addEventListener('keydown', (e) => {
-                e.stopPropagation(); 
+            textSpan.addEventListener('keydown', (e) => { e.stopPropagation(); });
+
+            // Delete Listener
+            const delBtn = div.querySelector('.delete-line-btn');
+            delBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                deleteLine(index);
             });
             
             linesContainer.appendChild(div);
         });
     }
+    
+    // Feature: Delete Line
+    function deleteLine(index) {
+        // Remove from data array
+        lyrics.splice(index, 1);
+        
+        // Adjust focus index
+        if (index < currentFocusIndex) {
+            currentFocusIndex--;
+        } else if (index === currentFocusIndex) {
+            // Stay at current index (which is now the next element), but check bounds
+            if (currentFocusIndex >= lyrics.length) {
+                currentFocusIndex = Math.max(0, lyrics.length - 1);
+            }
+        }
+        
+        // Re-render
+        renderSyncLines();
+        updateFocusUI();
+        
+        // If we deleted the only line
+        if(lyrics.length === 0) {
+            downloadBtn.disabled = true;
+        }
+    }
 
     function updateFocusUI() {
         document.querySelectorAll('.line-item').forEach(el => el.classList.remove('current-focus'));
         
-        if (currentFocusIndex < lyrics.length) {
+        if (currentFocusIndex < lyrics.length && lyrics.length > 0) {
             const el = document.getElementById(`line-${currentFocusIndex}`);
             if (el) {
                 el.classList.add('current-focus');
                 el.scrollIntoView({ behavior: "smooth", block: "center" });
             }
         }
+        
+        // Restore synced status visuals for existing lines
+        lyrics.forEach((line, idx) => {
+            if (line.start !== null) updateLineVisuals(idx);
+        });
     }
 
     // 4. Preview Logic
@@ -626,8 +688,6 @@
 
     function openPreview() {
         previewMode = true;
-        
-        // Render Karaoke Lines
         karaokeContainer.innerHTML = '';
         lyrics.forEach((line, index) => {
             const div = document.createElement('div');
@@ -636,7 +696,6 @@
             div.innerText = line.text;
             karaokeContainer.appendChild(div);
         });
-
         previewOverlay.classList.add('active');
     }
 
@@ -660,7 +719,6 @@
         const currentTime = audio.currentTime;
         lyrics[currentFocusIndex].start = currentTime;
 
-        // Auto-close previous line
         if (currentFocusIndex > 0 && lyrics[currentFocusIndex - 1].start !== null) {
             lyrics[currentFocusIndex - 1].end = currentTime;
         }
@@ -674,31 +732,30 @@
         showStatus("Synced! ⬇");
     }
 
-    // UPDATED: True Undo / Reset Previous Line
+    // True Undo / Reset Previous Line
     function triggerUndoPrev() {
         if (currentFocusIndex > 0) {
-            currentFocusIndex--; // Move back
+            currentFocusIndex--; 
 
             const line = lyrics[currentFocusIndex];
             
-            // 1. Rewind to start of this line (so user can catch the beat again)
             if (line.start !== null) {
                 audio.currentTime = line.start;
             }
 
-            // 2. Wipe Data
+            // Wipe Data
             line.start = null;
             line.end = null;
 
-            // 3. Reset Visuals (Remove Sync State)
+            // Reset Visuals
             const lineEl = document.getElementById(`line-${currentFocusIndex}`);
             const timeEl = document.getElementById(`time-${currentFocusIndex}`);
             
             if (lineEl) {
-                lineEl.classList.remove('synced'); // Remove green styling
+                lineEl.classList.remove('synced');
             }
             if (timeEl) {
-                timeEl.innerText = "--:--"; // Reset text
+                timeEl.innerText = "--:--";
             }
 
             updateFocusUI();
@@ -706,7 +763,6 @@
         }
     }
     
-    // Nudge Logic
     function nudgeTimestamp(amount) {
         if(currentFocusIndex >= lyrics.length) return;
         const line = lyrics[currentFocusIndex];
