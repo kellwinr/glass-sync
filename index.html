@@ -11,7 +11,8 @@
             --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
             --accent-color: #0a84ff;
             --text-color: #ffffff;
-            --active-line-bg: rgba(10, 132, 255, 0.4);
+            --active-line-bg: rgba(10, 132, 255, 0.6);
+            --synced-line-bg: rgba(50, 215, 75, 0.15);
         }
 
         body {
@@ -61,7 +62,7 @@
 
         /* File Metadata Display */
         .file-meta-display {
-            display: none; /* Hidden by default */
+            display: none;
             font-size: 0.85rem;
             background: rgba(0, 0, 0, 0.2);
             padding: 6px 12px;
@@ -96,9 +97,7 @@
             align-items: center;
         }
 
-        input[type="file"] {
-            display: none;
-        }
+        input[type="file"] { display: none; }
 
         .btn {
             background: var(--glass-bg);
@@ -110,6 +109,9 @@
             font-size: 0.9rem;
             transition: all 0.2s ease;
             backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .btn:hover {
@@ -123,9 +125,15 @@
             font-weight: 500;
         }
 
-        .btn-primary:hover {
-            background: #0071e3;
+        .btn-primary:hover { background: #0071e3; }
+
+        .btn-sync {
+            background: #32d74b;
+            border: none;
+            color: #000;
+            font-weight: 600;
         }
+        .btn-sync:hover { background: #28cd41; }
 
         /* Playback Controls */
         .playback-bar {
@@ -158,9 +166,7 @@
             overflow-y: auto;
         }
 
-        .editor-pane {
-            border-right: 1px solid var(--glass-border);
-        }
+        .editor-pane { border-right: 1px solid var(--glass-border); }
 
         textarea {
             width: 100%;
@@ -181,34 +187,36 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
-            padding-bottom: 50px; 
+            padding-bottom: 200px; /* Large padding for scrolling */
         }
 
         .line-item {
-            padding: 12px 16px;
+            padding: 14px 18px;
             border-radius: 12px;
             background: rgba(255, 255, 255, 0.05);
             cursor: pointer;
-            transition: all 0.15s ease;
+            transition: all 0.2s ease;
             border: 1px solid transparent;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            position: relative;
         }
 
-        .line-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .line-item.active {
+        /* Use this class for the line currently being edited/waited on */
+        .line-item.current-focus {
             background: var(--active-line-bg);
-            border-color: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
             transform: scale(1.02);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            z-index: 2;
         }
 
+        /* Use this class for lines that are already done */
         .line-item.synced {
             border-left: 4px solid #32d74b;
+            background: var(--synced-line-bg);
+            opacity: 0.7;
         }
 
         .timestamp-tag {
@@ -238,6 +246,7 @@
             pointer-events: none;
             opacity: 0;
             transition: opacity 0.3s;
+            z-index: 10;
         }
     </style>
 </head>
@@ -250,7 +259,7 @@
             <div class="file-meta-display" id="fileMeta">
                 <span class="meta-tag">📄 <span id="metaName">Song.mp3</span></span>
                 <span class="meta-tag">💿 <span id="metaFormat">MP3</span></span>
-                <span class="meta-tag">⏱ <span id="metaDuration">03:45</span></span>
+                <span class="meta-tag">⏱ <span id="metaDuration">00:00</span></span>
             </div>
         </div>
         <button class="btn btn-primary" id="downloadBtn" disabled>Download SRT</button>
@@ -266,16 +275,16 @@
         </div>
         
         <div class="playback-bar">
-            <button class="btn" id="rwBtn">⏪ -3s</button>
+            <button class="btn" id="prevLineBtn" title="Go back to previous line and retry">⬆️ Undo / Prev</button>
             <button class="btn btn-primary" id="playBtn">▶ Play</button>
-            <button class="btn" id="ffBtn">+3s ⏩</button>
+            <button class="btn btn-sync" id="nextLineBtn" title="Sync current timestamp and move to next">✅ Sync / Next</button>
             <div class="time-display" id="timeDisplay">00:00.00</div>
         </div>
     </div>
 
     <div class="workspace">
         <div class="editor-pane" id="editorPane">
-            <textarea id="rawLyrics" placeholder="Paste your lyrics here, line by line...&#10;&#10;Line 1&#10;Line 2&#10;Line 3"></textarea>
+            <textarea id="rawLyrics" placeholder="1. Upload Audio&#10;2. Paste Lyrics Here&#10;3. Click 'Load Lyrics'&#10;4. Press Play and use the 'Sync/Next' button to tap along!"></textarea>
         </div>
 
         <div class="preview-pane" id="syncPane" style="display: none;">
@@ -292,6 +301,7 @@
     let lyrics = []; 
     let isPlaying = false;
     let syncMode = false;
+    let currentFocusIndex = 0; // Tracks which line is currently "Ready to Sync"
 
     // DOM Elements
     const audioInput = document.getElementById('audioInput');
@@ -303,8 +313,10 @@
     const playBtn = document.getElementById('playBtn');
     const timeDisplay = document.getElementById('timeDisplay');
     const downloadBtn = document.getElementById('downloadBtn');
-    const rwBtn = document.getElementById('rwBtn');
-    const ffBtn = document.getElementById('ffBtn');
+    
+    // Updated Button Refs
+    const prevLineBtn = document.getElementById('prevLineBtn');
+    const nextLineBtn = document.getElementById('nextLineBtn');
     const statusMsg = document.getElementById('statusMsg');
 
     // Metadata Elements
@@ -313,28 +325,22 @@
     const metaFormat = document.getElementById('metaFormat');
     const metaDuration = document.getElementById('metaDuration');
 
-    // 1. Audio Loading & Metadata Extraction
+    // 1. Audio Loading & Metadata
     audioInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
             const url = URL.createObjectURL(file);
             audio.src = url;
             
-            // Extract Name
             metaName.innerText = file.name.length > 25 ? file.name.substring(0, 25) + '...' : file.name;
-            
-            // Extract Format/Extension
             const extension = file.name.split('.').pop().toUpperCase();
             metaFormat.innerText = extension;
 
-            // Extract Duration (Must wait for metadata to load)
             audio.addEventListener('loadedmetadata', function() {
                 const duration = audio.duration;
                 const min = Math.floor(duration / 60);
                 const sec = Math.floor(duration % 60);
                 metaDuration.innerText = `${min}:${String(sec).padStart(2, '0')}`;
-                
-                // Show the metadata badge
                 fileMeta.style.display = 'flex';
                 showStatus(`Loaded: ${file.name}`);
             }, { once: true });
@@ -355,7 +361,9 @@
             end: null
         }));
 
+        currentFocusIndex = 0;
         renderSyncLines();
+        updateFocusUI();
         
         editorPane.style.display = 'none';
         syncPane.style.display = 'flex';
@@ -363,7 +371,7 @@
         loadLyricsBtn.innerText = "🔄 Reset";
     });
 
-    // 3. Render Sync Interface
+    // 3. Render Interface
     function renderSyncLines() {
         linesContainer.innerHTML = '';
         lyrics.forEach((line, index) => {
@@ -375,92 +383,144 @@
                 <span class="timestamp-tag" id="time-${index}">--:--</span>
             `;
             
-            div.addEventListener('click', () => syncLine(index));
+            // Manual click to jump focus to this line
+            div.addEventListener('click', () => {
+                currentFocusIndex = index;
+                updateFocusUI();
+                // Optionally seek audio if this line was already synced
+                if(lyrics[index].start !== null) {
+                    audio.currentTime = lyrics[index].start;
+                }
+            });
+            
             linesContainer.appendChild(div);
         });
     }
 
-    // 4. Sync Logic
-    function syncLine(index) {
+    // 4. Update Visual Focus (The blue highlight)
+    function updateFocusUI() {
+        // Remove focus from all
+        document.querySelectorAll('.line-item').forEach(el => el.classList.remove('current-focus'));
+        
+        // Add focus to current
+        if (currentFocusIndex < lyrics.length) {
+            const el = document.getElementById(`line-${currentFocusIndex}`);
+            if (el) {
+                el.classList.add('current-focus');
+                el.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+        }
+    }
+
+    // 5. The Core Sync Logic (Button Controlled)
+    
+    // "NEXT / SYNC" Button
+    function triggerSyncNext() {
         if (!audio.src) return alert("Please upload an MP3 first.");
-        
+        if (!isPlaying && lyrics[currentFocusIndex]?.start === null) {
+             // Optional: Auto-play if not playing on first sync
+             audio.play();
+             isPlaying = true;
+             updatePlayButton();
+        }
+
+        if (currentFocusIndex >= lyrics.length) return;
+
         const currentTime = audio.currentTime;
-        lyrics[index].start = currentTime;
-        
-        if (index > 0 && lyrics[index-1].start !== null) {
-            lyrics[index-1].end = currentTime;
+
+        // 1. Set Start Time for Current
+        lyrics[currentFocusIndex].start = currentTime;
+
+        // 2. Set End Time for Previous (if exists)
+        if (currentFocusIndex > 0 && lyrics[currentFocusIndex - 1].start !== null) {
+            lyrics[currentFocusIndex - 1].end = currentTime;
         }
 
-        const lineEl = document.getElementById(`line-${index}`);
-        const timeEl = document.getElementById(`time-${index}`);
-        
+        // 3. Update UI for the just-synced line
+        const lineEl = document.getElementById(`line-${currentFocusIndex}`);
+        const timeEl = document.getElementById(`time-${currentFocusIndex}`);
         lineEl.classList.add('synced');
-        lineEl.classList.add('active');
         timeEl.innerText = formatTimeDisplay(currentTime);
-        
-        if(index < lyrics.length - 1) {
-            document.getElementById(`line-${index+1}`).scrollIntoView({ behavior: "smooth", block: "center" });
-        }
 
-        lyrics.forEach((l, i) => {
-            if (i !== index) document.getElementById(`line-${i}`).classList.remove('active');
-        });
+        // 4. Move Focus Forward
+        currentFocusIndex++;
+        updateFocusUI();
 
         downloadBtn.disabled = false;
-        showStatus("Timestamp Set");
+        // Small feedback
+        showStatus("Synced! ⬇");
     }
 
-    // 5. Audio Controls
-    playBtn.addEventListener('click', togglePlay);
-    
-    document.addEventListener('keydown', (e) => {
-        if (!syncMode) return;
-        if (e.code === 'Space') {
-            e.preventDefault();
-            togglePlay();
+    // "PREV / UNDO" Button
+    function triggerUndoPrev() {
+        if (currentFocusIndex > 0) {
+            // 1. Move focus back
+            currentFocusIndex--;
+            
+            // 2. Seek audio to the start of this line (so user can retry)
+            // If it was synced, we use that time. If not, we don't seek.
+            if (lyrics[currentFocusIndex].start !== null) {
+                audio.currentTime = lyrics[currentFocusIndex].start;
+            }
+
+            // 3. Update Visuals
+            updateFocusUI();
+            showStatus("Retry Line ⬆");
         }
-        if (e.code === 'ArrowLeft') skip(-3);
-        if (e.code === 'ArrowRight') skip(3);
-    });
+    }
 
-    rwBtn.addEventListener('click', () => skip(-3));
-    ffBtn.addEventListener('click', () => skip(3));
+    // 6. Controls & Events
+    nextLineBtn.addEventListener('click', triggerSyncNext);
+    prevLineBtn.addEventListener('click', triggerUndoPrev);
 
-    function togglePlay() {
+    playBtn.addEventListener('click', () => {
         if (isPlaying) {
             audio.pause();
-            playBtn.innerText = "▶ Play";
-            playBtn.style.background = "var(--accent-color)";
+            isPlaying = false;
         } else {
             audio.play();
-            playBtn.innerText = "⏸ Pause";
-            playBtn.style.background = "#ff3b30";
+            isPlaying = true;
         }
-        isPlaying = !isPlaying;
-    }
-
-    function skip(seconds) {
-        audio.currentTime += seconds;
-    }
-
-    // 6. Time Update & Auto-Scroll
-    audio.addEventListener('timeupdate', () => {
-        timeDisplay.innerText = formatTimeDisplay(audio.currentTime);
-        
-        const currentT = audio.currentTime;
-        lyrics.forEach((line, idx) => {
-            if (line.start !== null && currentT >= line.start && (line.end === null || currentT < line.end)) {
-                const el = document.getElementById(`line-${idx}`);
-                if (!el.classList.contains('active')) {
-                    document.querySelectorAll('.line-item').forEach(e => e.classList.remove('active'));
-                    el.classList.add('active');
-                    el.scrollIntoView({ behavior: "smooth", block: "center" });
-                }
-            }
-        });
+        updatePlayButton();
     });
 
-    // 7. SRT Generation
+    function updatePlayButton() {
+        if(isPlaying) {
+            playBtn.innerText = "⏸ Pause";
+            playBtn.style.background = "#ff3b30";
+        } else {
+            playBtn.innerText = "▶ Play";
+            playBtn.style.background = "var(--accent-color)";
+        }
+    }
+
+    // Keyboard Shortcuts
+    document.addEventListener('keydown', (e) => {
+        if (!syncMode) return;
+
+        // Space: Play/Pause
+        if (e.code === 'Space') {
+            e.preventDefault();
+            playBtn.click();
+        }
+        // Down/Right: Sync Next
+        if (e.code === 'ArrowDown' || e.code === 'ArrowRight') {
+            e.preventDefault();
+            triggerSyncNext();
+        }
+        // Up/Left: Undo Prev
+        if (e.code === 'ArrowUp' || e.code === 'ArrowLeft') {
+            e.preventDefault();
+            triggerUndoPrev();
+        }
+    });
+
+    // 7. Time Update (Just for display now, Sync is manual)
+    audio.addEventListener('timeupdate', () => {
+        timeDisplay.innerText = formatTimeDisplay(audio.currentTime);
+    });
+
+    // 8. SRT Generation
     downloadBtn.addEventListener('click', () => {
         let srtContent = "";
         let counter = 1;
@@ -469,6 +529,7 @@
             if (line.start === null) return; 
 
             const start = line.start;
+            // If end is null (last line), add 3 seconds default
             const end = line.end !== null ? line.end : (line.start + 3);
 
             srtContent += `${counter}\n`;
@@ -503,14 +564,12 @@
         return `${hours}:${minutes}:${secs},${ms}`;
     }
 
-    function pad(num) {
-        return String(num).padStart(2, '0');
-    }
+    function pad(num) { return String(num).padStart(2, '0'); }
 
     function showStatus(msg) {
         statusMsg.innerText = msg;
         statusMsg.style.opacity = '1';
-        setTimeout(() => { statusMsg.style.opacity = '0'; }, 1500);
+        setTimeout(() => { statusMsg.style.opacity = '0'; }, 1000);
     }
 </script>
 
