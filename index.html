@@ -11,6 +11,7 @@
             --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
             --accent-color: #0a84ff;
             --danger-color: #ff453a;
+            --warning-color: #ff9f0a;
             --text-color: #ffffff;
             --active-line-bg: rgba(10, 132, 255, 0.6);
             --synced-line-bg: rgba(50, 215, 75, 0.15);
@@ -58,6 +59,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            z-index: 20;
         }
 
         .header-left { display: flex; flex-direction: column; gap: 5px; }
@@ -94,13 +96,10 @@
             gap: 20px;
             align-items: center;
             background: rgba(0, 0, 0, 0.1);
+            z-index: 20;
         }
 
-        .file-inputs {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-        }
+        .file-inputs { display: flex; gap: 15px; align-items: center; }
 
         input[type="file"] { display: none; }
 
@@ -116,13 +115,17 @@
             backdrop-filter: blur(4px);
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 8px;
+            min-width: 40px;
         }
 
         .btn:hover {
             background: rgba(255, 255, 255, 0.3);
             transform: translateY(-1px);
         }
+
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
         .btn-primary { background: var(--accent-color); border: none; font-weight: 500; }
         .btn-primary:hover { background: #0071e3; }
@@ -133,11 +136,22 @@
         .btn-sync { background: #32d74b; border: none; color: #000; font-weight: 600; }
         .btn-sync:hover { background: #28cd41; }
 
+        .btn-preview { background: rgba(172, 60, 222, 0.3); border: 1px solid rgba(172, 60, 222, 0.5); }
+        .btn-preview:hover { background: rgba(172, 60, 222, 0.6); }
+        
+        .btn-nudge {
+            background: rgba(255, 159, 10, 0.2);
+            border: 1px solid rgba(255, 159, 10, 0.4);
+            font-size: 0.8rem;
+            padding: 8px 12px;
+        }
+        .btn-nudge:hover { background: rgba(255, 159, 10, 0.5); }
+
         /* Playback Controls */
         .playback-bar {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 10px;
             justify-content: center;
         }
 
@@ -181,7 +195,7 @@
 
         textarea::placeholder { color: rgba(255, 255, 255, 0.4); }
 
-        /* Sync Lines */
+        /* Sync Lines List */
         .sync-lines {
             display: flex;
             flex-direction: column;
@@ -216,7 +230,6 @@
             opacity: 0.7;
         }
 
-        /* Editable Text Styling */
         .line-text {
             flex: 1;
             margin-right: 15px;
@@ -226,7 +239,6 @@
         }
         
         .line-text:hover { border-bottom: 1px solid rgba(255,255,255,0.3); }
-
         .line-text:focus {
             border-bottom: 1px solid var(--accent-color);
             background: rgba(0,0,0,0.1);
@@ -242,6 +254,63 @@
             border-radius: 6px;
             opacity: 0.7;
             user-select: none;
+        }
+
+        /* PREVIEW OVERLAY (Karaoke Mode) */
+        .preview-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 10, 20, 0.95);
+            backdrop-filter: blur(20px);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 100px;
+            overflow-y: auto;
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .preview-overlay.active {
+            transform: translateY(0);
+        }
+
+        .preview-header {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 101;
+        }
+
+        .karaoke-container {
+            width: 80%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            text-align: center;
+            padding-bottom: 200px; /* space for scrolling */
+        }
+
+        .karaoke-line {
+            font-size: 1.5rem;
+            color: rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        .karaoke-line.active {
+            color: #fff;
+            font-weight: 700;
+            transform: scale(1.1);
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.05);
         }
 
         /* Scrollbar Styling */
@@ -263,7 +332,7 @@
             pointer-events: none;
             opacity: 0;
             transition: opacity 0.3s;
-            z-index: 10;
+            z-index: 200;
         }
 
         /* Keyboard Legend */
@@ -281,6 +350,7 @@
             font-size: 0.75rem;
             color: rgba(255, 255, 255, 0.6);
             border-top: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 20;
         }
         .key-badge {
             background: rgba(255, 255, 255, 0.15);
@@ -289,6 +359,14 @@
             color: white;
             font-weight: 600;
             margin-right: 5px;
+        }
+        
+        .nudge-group {
+            display: flex;
+            gap: 5px;
+            margin-right: 10px;
+            border-right: 1px solid rgba(255,255,255,0.2);
+            padding-right: 10px;
         }
     </style>
 </head>
@@ -305,10 +383,19 @@
             </div>
         </div>
         <div class="header-right">
+            <button class="btn btn-preview" id="previewBtn" disabled>👁️ Preview</button>
             <button class="btn btn-danger" id="fullResetBtn">🗑️ Clear All</button>
             <button class="btn btn-primary" id="downloadBtn" disabled>Download SRT</button>
         </div>
     </header>
+
+    <div class="preview-overlay" id="previewOverlay">
+        <div class="preview-header">
+            <button class="btn" id="closePreviewBtn">❌ Close Preview</button>
+        </div>
+        <div class="karaoke-container" id="karaokeContainer">
+            </div>
+    </div>
 
     <div class="controls">
         <div class="top-controls">
@@ -320,16 +407,21 @@
         </div>
         
         <div class="playback-bar">
-            <button class="btn" id="prevLineBtn" title="Previous Line (Arrow Up/Left)">⬆️ Undo</button>
+            <div class="nudge-group">
+                <button class="btn btn-nudge" id="nudgeBackBtn" title="Shift timestamp back 0.1s (Arrow Left)">-0.1s</button>
+                <button class="btn btn-nudge" id="nudgeFwdBtn" title="Shift timestamp forward 0.1s (Arrow Right)">+0.1s</button>
+            </div>
+
+            <button class="btn" id="prevLineBtn" title="Previous Line (Arrow Up)">⬆️ Undo</button>
             <button class="btn btn-primary" id="playBtn" title="Play/Pause (Space)">▶ Play</button>
-            <button class="btn btn-sync" id="nextLineBtn" title="Next Line (Arrow Down/Right)">✅ Sync / Next</button>
+            <button class="btn btn-sync" id="nextLineBtn" title="Next Line (Arrow Down)">✅ Sync / Next</button>
             <div class="time-display" id="timeDisplay">00:00.00</div>
         </div>
     </div>
 
     <div class="workspace">
         <div class="editor-pane" id="editorPane">
-            <textarea id="rawLyrics" placeholder="1. Upload Audio&#10;2. Paste Lyrics Here&#10;3. Click 'Load Lyrics'&#10;4. Press Play&#10;5. Use Arrow Keys to Sync!"></textarea>
+            <textarea id="rawLyrics" placeholder="1. Upload Audio&#10;2. Paste Lyrics Here&#10;3. Click 'Load Lyrics'&#10;4. Press Play&#10;5. Use Down Arrow to Sync, Left/Right to Fine-tune!"></textarea>
         </div>
 
         <div class="preview-pane" id="syncPane" style="display: none;">
@@ -341,8 +433,9 @@
 
     <div class="keyboard-legend">
         <span><span class="key-badge">Space</span> Play/Pause</span>
-        <span><span class="key-badge">⬇ / ➡</span> Sync Next</span>
-        <span><span class="key-badge">⬆ / ⬅</span> Undo Prev</span>
+        <span><span class="key-badge">⬇</span> Sync Next</span>
+        <span><span class="key-badge">⬆</span> Undo Prev</span>
+        <span><span class="key-badge">⬅ / ➡</span> -0.1s / +0.1s Adjustment</span>
     </div>
 </div>
 
@@ -352,6 +445,7 @@
     let lyrics = []; 
     let isPlaying = false;
     let syncMode = false;
+    let previewMode = false;
     let currentFocusIndex = 0; 
 
     // DOM Elements
@@ -359,9 +453,15 @@
     const rawLyrics = document.getElementById('rawLyrics');
     const loadLyricsBtn = document.getElementById('loadLyricsBtn');
     const fullResetBtn = document.getElementById('fullResetBtn');
+    const previewBtn = document.getElementById('previewBtn');
+    const closePreviewBtn = document.getElementById('closePreviewBtn');
+    
     const editorPane = document.getElementById('editorPane');
     const syncPane = document.getElementById('syncPane');
     const linesContainer = document.getElementById('linesContainer');
+    const previewOverlay = document.getElementById('previewOverlay');
+    const karaokeContainer = document.getElementById('karaokeContainer');
+    
     const playBtn = document.getElementById('playBtn');
     const timeDisplay = document.getElementById('timeDisplay');
     const downloadBtn = document.getElementById('downloadBtn');
@@ -369,6 +469,9 @@
     const nextLineBtn = document.getElementById('nextLineBtn');
     const statusMsg = document.getElementById('statusMsg');
     
+    const nudgeBackBtn = document.getElementById('nudgeBackBtn');
+    const nudgeFwdBtn = document.getElementById('nudgeFwdBtn');
+
     // Metadata
     const fileMeta = document.getElementById('fileMeta');
     const metaName = document.getElementById('metaName');
@@ -424,9 +527,10 @@
         syncPane.style.display = 'flex';
         syncMode = true;
         loadLyricsBtn.innerText = "🔄 Restart Sync";
+        previewBtn.disabled = false;
     });
 
-    // NEW: Full Reset
+    // Full Reset
     fullResetBtn.addEventListener('click', () => {
         if(!confirm("Are you sure you want to clear the audio and lyrics?")) return;
 
@@ -445,8 +549,11 @@
         syncMode = false;
         loadLyricsBtn.innerText = "📝 Load Lyrics";
         downloadBtn.disabled = true;
+        previewBtn.disabled = true;
         updatePlayButton();
         timeDisplay.innerText = "00:00.00";
+        
+        if(previewMode) closePreview();
         
         showStatus("Cleared All!");
     });
@@ -466,7 +573,7 @@
         showStatus("Restarted!");
     }
 
-    // 3. Render Interface
+    // 3. Render Editor Interface
     function renderSyncLines() {
         linesContainer.innerHTML = '';
         lyrics.forEach((line, index) => {
@@ -513,7 +620,32 @@
         }
     }
 
-    // 4. Sync Logic
+    // 4. Preview Logic
+    previewBtn.addEventListener('click', openPreview);
+    closePreviewBtn.addEventListener('click', closePreview);
+
+    function openPreview() {
+        previewMode = true;
+        
+        // Render Karaoke Lines
+        karaokeContainer.innerHTML = '';
+        lyrics.forEach((line, index) => {
+            const div = document.createElement('div');
+            div.className = 'karaoke-line';
+            div.id = `k-line-${index}`;
+            div.innerText = line.text;
+            karaokeContainer.appendChild(div);
+        });
+
+        previewOverlay.classList.add('active');
+    }
+
+    function closePreview() {
+        previewMode = false;
+        previewOverlay.classList.remove('active');
+    }
+
+    // 5. Sync Logic
     function triggerSyncNext() {
         if (!audio.src) return alert("Please upload an MP3 first.");
         
@@ -528,14 +660,12 @@
         const currentTime = audio.currentTime;
         lyrics[currentFocusIndex].start = currentTime;
 
+        // Auto-close previous line
         if (currentFocusIndex > 0 && lyrics[currentFocusIndex - 1].start !== null) {
             lyrics[currentFocusIndex - 1].end = currentTime;
         }
 
-        const lineEl = document.getElementById(`line-${currentFocusIndex}`);
-        const timeEl = document.getElementById(`time-${currentFocusIndex}`);
-        lineEl.classList.add('synced');
-        timeEl.innerText = formatTimeDisplay(currentTime);
+        updateLineVisuals(currentFocusIndex);
 
         currentFocusIndex++;
         updateFocusUI();
@@ -547,19 +677,44 @@
     function triggerUndoPrev() {
         if (currentFocusIndex > 0) {
             currentFocusIndex--;
-            
             if (lyrics[currentFocusIndex].start !== null) {
                 audio.currentTime = lyrics[currentFocusIndex].start;
             }
-
             updateFocusUI();
             showStatus("Retry Line ⬆");
         }
     }
+    
+    function nudgeTimestamp(amount) {
+        if(currentFocusIndex >= lyrics.length) return;
+        const line = lyrics[currentFocusIndex];
+        
+        if(line.start !== null) {
+            line.start = Math.max(0, line.start + amount);
+            if (currentFocusIndex > 0 && lyrics[currentFocusIndex - 1].start !== null) {
+                lyrics[currentFocusIndex - 1].end = line.start;
+            }
+            updateLineVisuals(currentFocusIndex);
+            showStatus(amount > 0 ? "+0.1s ➡" : "⬅ -0.1s");
+        } else {
+            showStatus("Sync line first!");
+        }
+    }
 
-    // 5. Controls & Events
+    function updateLineVisuals(index) {
+        const lineEl = document.getElementById(`line-${index}`);
+        const timeEl = document.getElementById(`time-${index}`);
+        if(lineEl && timeEl) {
+            lineEl.classList.add('synced');
+            timeEl.innerText = formatTimeDisplay(lyrics[index].start);
+        }
+    }
+
+    // 6. Controls & Playback Loop
     nextLineBtn.addEventListener('click', triggerSyncNext);
     prevLineBtn.addEventListener('click', triggerUndoPrev);
+    nudgeBackBtn.addEventListener('click', () => nudgeTimestamp(-0.1));
+    nudgeFwdBtn.addEventListener('click', () => nudgeTimestamp(0.1));
 
     playBtn.addEventListener('click', () => {
         if (isPlaying) {
@@ -582,42 +737,68 @@
         }
     }
 
-    // --- KEYBOARD LISTENERS ---
-    document.addEventListener('keydown', (e) => {
-        // If user is editing text, don't use shortcuts
-        if (e.target.isContentEditable) return;
+    audio.addEventListener('timeupdate', () => {
+        const ct = audio.currentTime;
+        timeDisplay.innerText = formatTimeDisplay(ct);
 
+        // Preview Mode Logic
+        if (previewMode) {
+            lyrics.forEach((line, index) => {
+                const kLine = document.getElementById(`k-line-${index}`);
+                if (!kLine) return;
+                
+                // Determine if this line is active
+                // Active if: Time >= Start AND (Time < NextStart OR No Next Line)
+                const isStarted = line.start !== null && ct >= line.start;
+                const nextLine = lyrics[index + 1];
+                const isEnded = nextLine && nextLine.start !== null ? ct >= nextLine.start : false;
+
+                if (isStarted && !isEnded) {
+                    if (!kLine.classList.contains('active')) {
+                        // Clear others
+                        document.querySelectorAll('.karaoke-line').forEach(el => el.classList.remove('active'));
+                        kLine.classList.add('active');
+                        kLine.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }
+                }
+            });
+        }
+    });
+
+    // 7. Keyboard
+    document.addEventListener('keydown', (e) => {
+        if (e.target.isContentEditable) return;
         if (!syncMode) return;
 
-        // Space: Play/Pause
         if (e.code === 'Space') {
             e.preventDefault();
             playBtn.click();
         }
-        // Down / Right: Sync Next
-        if (e.code === 'ArrowDown' || e.code === 'ArrowRight') {
-            e.preventDefault(); // Prevent page scroll
+        if (e.code === 'ArrowDown') {
+            e.preventDefault();
             triggerSyncNext();
         }
-        // Up / Left: Undo Prev
-        if (e.code === 'ArrowUp' || e.code === 'ArrowLeft') {
-            e.preventDefault(); // Prevent page scroll
+        if (e.code === 'ArrowUp') {
+            e.preventDefault();
             triggerUndoPrev();
+        }
+        if (e.code === 'ArrowLeft') {
+            e.preventDefault();
+            nudgeTimestamp(-0.1);
+        }
+        if (e.code === 'ArrowRight') {
+            e.preventDefault();
+            nudgeTimestamp(0.1);
         }
     });
 
-    audio.addEventListener('timeupdate', () => {
-        timeDisplay.innerText = formatTimeDisplay(audio.currentTime);
-    });
-
-    // 6. SRT Generation
+    // 8. SRT Download
     downloadBtn.addEventListener('click', () => {
         let srtContent = "";
         let counter = 1;
 
         lyrics.forEach((line, index) => {
             if (line.start === null) return; 
-
             const start = line.start;
             const end = line.end !== null ? line.end : (line.start + 3);
 
@@ -637,6 +818,7 @@
     });
 
     function formatTimeDisplay(seconds) {
+        if (seconds === null) return "--:--";
         const min = Math.floor(seconds / 60);
         const sec = Math.floor(seconds % 60);
         const ms = Math.floor((seconds % 1) * 100);
