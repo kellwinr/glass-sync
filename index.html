@@ -30,7 +30,7 @@
             overflow: hidden;
         }
 
-        /* --- MAIN LAYOUT STRUCTURE (Flex Stack) --- */
+        /* --- MAIN LAYOUT STRUCTURE --- */
         .glass-container {
             background: var(--glass-bg);
             backdrop-filter: blur(12px);
@@ -47,7 +47,7 @@
             position: relative;
         }
 
-        /* 1. TOP SECTION (Fixed Height) */
+        /* 1. TOP SECTION */
         .top-section {
             flex: 0 0 auto;
             background: rgba(255, 255, 255, 0.05);
@@ -72,7 +72,7 @@
             gap: 10px;
         }
 
-        /* 2. MIDDLE SECTION (Flexible Scroll) */
+        /* 2. MIDDLE SECTION */
         .workspace {
             flex: 1;
             min-height: 0;
@@ -89,7 +89,7 @@
             scroll-behavior: smooth;
         }
 
-        /* 3. BOTTOM SECTION (Fixed Height) */
+        /* 3. BOTTOM SECTION */
         .keyboard-legend {
             flex: 0 0 auto;
             padding: 12px 0;
@@ -168,7 +168,6 @@
         }
         textarea::placeholder { color: rgba(255, 255, 255, 0.3); }
 
-        /* Sync Lines */
         .sync-lines { display: flex; flex-direction: column; gap: 8px; }
 
         .line-item {
@@ -216,7 +215,7 @@
         }
         .del-btn:hover { color: var(--danger-color); }
 
-        /* --- PREVIEW OVERLAY (Optimized) --- */
+        /* --- PREVIEW OVERLAY --- */
         .preview-overlay {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -233,25 +232,40 @@
             to { transform: translateY(0); }
         }
 
+        .preview-header {
+            flex: 0 0 auto;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: flex-end;
+            background: linear-gradient(to bottom, rgba(13,13,22,0.9), transparent);
+            z-index: 102;
+        }
+
         .preview-scroll-area {
             flex: 1;
             overflow-y: auto;
-            padding: 80px 20px;
+            padding: 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 24px;
+            scrollbar-color: rgba(255,255,255,0.2) transparent;
         }
 
         .karaoke-line {
             font-size: 1.4rem;
             color: rgba(255,255,255,0.2);
             text-align: center;
-            /* Faster transition for snappy feel */
-            transition: color 0.15s ease-out, transform 0.15s ease-out;
+            transition: all 0.15s ease-out;
             max-width: 800px;
-            /* Performance Hint */
             will-change: transform, color;
+            cursor: pointer; /* Changed to pointer */
+            border-radius: 8px;
+            padding: 5px 15px;
+        }
+        .karaoke-line:hover {
+            background: rgba(255,255,255,0.05);
+            color: rgba(255,255,255,0.6);
         }
         .karaoke-line.active {
             color: #fff;
@@ -259,19 +273,70 @@
             text-shadow: 0 0 20px rgba(255,255,255,0.4);
         }
 
-        .preview-controls {
+        .preview-footer {
             flex: 0 0 auto;
-            padding: 20px;
-            background: rgba(20, 20, 30, 0.9);
+            background: rgba(20, 20, 30, 0.8);
+            backdrop-filter: blur(20px);
             border-top: 1px solid rgba(255,255,255,0.1);
+            padding: 15px 25px;
             display: flex;
-            justify-content: flex-end;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 102;
         }
 
-        /* Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
+        .preview-scrubber-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+
+        /* Custom Range Slider */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 14px;
+            width: 14px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+            margin-top: -5px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+        }
+        input[type=range]:focus { outline: none; }
+
+        .preview-controls-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            position: relative;
+        }
+        
+        .preview-time {
+            font-family: monospace;
+            font-size: 0.9rem;
+            opacity: 0.7;
+            position: absolute;
+            right: 0;
+        }
+
+        /* Global Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.4); }
 
         .key-badge {
@@ -358,10 +423,22 @@
     </div>
 
     <div class="preview-overlay" id="previewOverlay">
+        <div class="preview-header">
+            <button class="btn btn-danger" id="closePreviewBtn">❌ Close Preview</button>
+        </div>
+        
         <div class="preview-scroll-area" id="karaokeContainer">
             </div>
-        <div class="preview-controls">
-            <button class="btn btn-danger" id="closePreviewBtn">❌ Close Preview</button>
+
+        <div class="preview-footer">
+            <div class="preview-scrubber-row">
+                <span style="font-size:0.8rem; opacity:0.7">Seek:</span>
+                <input type="range" id="previewScrubber" value="0" step="0.01" min="0" max="100">
+            </div>
+            <div class="preview-controls-row">
+                <button class="btn btn-primary" id="previewPlayBtn" style="padding:10px 25px; font-size:1.1rem">▶ Play</button>
+                <div class="preview-time" id="previewTimeDisplay">00:00 / 00:00</div>
+            </div>
         </div>
     </div>
 
@@ -375,7 +452,7 @@
     let syncMode = false;
     let previewMode = false;
     let currentFocusIndex = 0;
-    let rAF; // Request Animation Frame ID
+    let rAF;
 
     // --- ELEMENTS ---
     const els = {
@@ -388,10 +465,16 @@
         playBtn: document.getElementById('playBtn'),
         timeDisplay: document.getElementById('timeDisplay'),
         downloadBtn: document.getElementById('downloadBtn'),
+        
+        // Preview Elements
         previewBtn: document.getElementById('previewBtn'),
         previewOverlay: document.getElementById('previewOverlay'),
         karaokeContainer: document.getElementById('karaokeContainer'),
         closePreviewBtn: document.getElementById('closePreviewBtn'),
+        previewPlayBtn: document.getElementById('previewPlayBtn'),
+        previewScrubber: document.getElementById('previewScrubber'),
+        previewTimeDisplay: document.getElementById('previewTimeDisplay'),
+        
         statusMsg: document.getElementById('statusMsg'),
         metaName: document.getElementById('metaName'),
         metaDuration: document.getElementById('metaDuration'),
@@ -411,7 +494,9 @@
         audio.addEventListener('loadedmetadata', () => {
             const m = Math.floor(audio.duration / 60);
             const s = Math.floor(audio.duration % 60);
-            els.metaDuration.innerText = `${m}:${s.toString().padStart(2,'0')}`;
+            const totalStr = `${m}:${s.toString().padStart(2,'0')}`;
+            els.metaDuration.innerText = totalStr;
+            els.previewScrubber.max = audio.duration;
             showStatus("Audio Loaded");
         }, {once:true});
     });
@@ -450,6 +535,7 @@
         els.loadLyricsBtn.innerText = "📝 Load Lyrics";
         els.previewBtn.disabled = true;
         els.downloadBtn.disabled = true;
+        if(previewMode) closePreview();
         showStatus("Reset");
     }
 
@@ -542,10 +628,7 @@
 
         updateLineStatus(currentFocusIndex);
         currentFocusIndex++;
-        
-        if (currentFocusIndex < lyrics.length) {
-            highlightLine(currentFocusIndex);
-        }
+        if (currentFocusIndex < lyrics.length) highlightLine(currentFocusIndex);
         
         els.downloadBtn.disabled = false;
         showStatus("Synced! ⬇");
@@ -561,12 +644,10 @@
             showStatus("Synced 0s");
             return;
         }
-
         if(currentFocusIndex > 0) {
             currentFocusIndex--;
             const l = lyrics[currentFocusIndex];
             if(l.start !== null) audio.currentTime = l.start;
-            
             l.start = null; l.end = null;
             updateLineStatus(currentFocusIndex);
             highlightLine(currentFocusIndex);
@@ -588,7 +669,7 @@
         }
     }
 
-    // --- 5. PREVIEW MODE (HIGH PERFORMANCE) ---
+    // --- 5. PREVIEW MODE ---
     els.previewBtn.addEventListener('click', () => {
         previewMode = true;
         els.karaokeContainer.innerHTML = '';
@@ -597,57 +678,70 @@
             d.className = 'karaoke-line';
             d.id = `k-${i}`;
             d.innerText = l.text;
+            
+            // CLICK TO SEEK LOGIC
+            d.addEventListener('click', () => {
+                if(l.start !== null) {
+                    audio.currentTime = l.start;
+                    if(!isPlaying) { audio.play(); isPlaying = true; updatePlayBtn(); }
+                }
+            });
+            
             els.karaokeContainer.appendChild(d);
         });
         els.previewOverlay.classList.add('active');
-        
-        // Start Render Loop
+        updatePlayBtn(); 
         rAF = requestAnimationFrame(previewLoop);
     });
 
-    els.closePreviewBtn.addEventListener('click', () => {
+    function closePreview() {
         previewMode = false;
+        audio.pause(); 
+        isPlaying = false;
+        updatePlayBtn();
         els.previewOverlay.classList.remove('active');
         cancelAnimationFrame(rAF);
+    }
+    els.closePreviewBtn.addEventListener('click', closePreview);
+
+    // Preview Controls
+    els.previewPlayBtn.addEventListener('click', togglePlay);
+    els.previewScrubber.addEventListener('input', (e) => {
+        audio.currentTime = e.target.value;
     });
 
-    // 60FPS Render Loop
+    // Render Loop
     function previewLoop() {
         if(!previewMode) return;
         
         const t = audio.currentTime;
-        // Optimization: Don't scan entire list every frame.
-        // We can just check current index and surrounding.
-        // But for <1000 lines, simple loop is fine on modern devices.
-        
-        let activeIdx = -1;
+        els.previewScrubber.value = t;
+        updatePreviewTime(t);
 
+        let activeIdx = -1;
         for (let i = 0; i < lyrics.length; i++) {
             const l = lyrics[i];
             const nextStart = (i < lyrics.length - 1 && lyrics[i+1].start) ? lyrics[i+1].start : 99999;
-            
             if(l.start !== null && t >= l.start && t < nextStart) {
-                activeIdx = i;
-                break;
+                activeIdx = i; break;
             }
         }
 
         if(activeIdx !== -1) {
             const k = document.getElementById(`k-${activeIdx}`);
             if(k && !k.classList.contains('active')) {
-                // DOM Write
                 document.querySelectorAll('.karaoke-line.active').forEach(e => e.classList.remove('active'));
                 k.classList.add('active');
                 k.scrollIntoView({behavior: "smooth", block: "center"});
             }
         }
-        
         rAF = requestAnimationFrame(previewLoop);
     }
 
-    // --- 6. STANDARD TIME UPDATE (For Counter) ---
+    // --- 6. CONTROLS ---
     audio.addEventListener('timeupdate', () => {
-        els.timeDisplay.innerText = formatTime(audio.currentTime);
+        const t = audio.currentTime;
+        els.timeDisplay.innerText = formatTime(t);
     });
 
     document.getElementById('nextLineBtn').addEventListener('click', syncNext);
@@ -656,17 +750,33 @@
     document.getElementById('nudgeFwdBtn').addEventListener('click', () => nudge(0.1));
     
     els.playBtn.addEventListener('click', togglePlay);
+    
     function togglePlay() {
         if(isPlaying) { audio.pause(); } else { audio.play(); }
         isPlaying = !isPlaying;
         updatePlayBtn();
     }
+
     function updatePlayBtn() {
-        els.playBtn.innerText = isPlaying ? "⏸ Pause" : "▶ Play";
-        els.playBtn.style.background = isPlaying ? "#ff3b30" : "var(--accent-color)";
+        const text = isPlaying ? "⏸ Pause" : "▶ Play";
+        const bg = isPlaying ? "#ff3b30" : "var(--accent-color)";
+        
+        // Update Main Button
+        els.playBtn.innerText = text;
+        els.playBtn.style.background = bg;
+        
+        // Update Preview Button
+        els.previewPlayBtn.innerText = text;
+        els.previewPlayBtn.style.background = bg;
+    }
+    
+    function updatePreviewTime(current) {
+        if(isNaN(audio.duration)) return;
+        const curStr = formatTime(current);
+        const totStr = formatTime(audio.duration);
+        els.previewTimeDisplay.innerText = `${curStr} / ${totStr}`;
     }
 
-    // Keyboard
     document.addEventListener('keydown', (e) => {
         if(e.target.isContentEditable) return;
         if(!syncMode) return;
@@ -680,7 +790,6 @@
         }
     });
 
-    // Download SRT
     els.downloadBtn.addEventListener('click', () => {
         let txt = "";
         lyrics.forEach((l, i) => {
@@ -695,8 +804,8 @@
         a.click();
     });
 
-    // Utils
     function formatTime(s) {
+        if(!s) s=0;
         const ms = Math.floor((s % 1) * 100);
         const sec = Math.floor(s % 60);
         const min = Math.floor(s / 60);
@@ -712,7 +821,6 @@
         els.statusMsg.style.opacity = 1;
         setTimeout(() => els.statusMsg.style.opacity = 0, 1000);
     }
-
 </script>
 </body>
 </html>
