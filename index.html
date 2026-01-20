@@ -66,9 +66,15 @@
         .controls {
             padding: 15px 20px;
             display: flex;
+            flex-direction: column; 
+            gap: 15px;
+        }
+
+        .controls-row {
+            display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
+            width: 100%;
             gap: 10px;
         }
 
@@ -148,11 +154,63 @@
         .time-display {
             font-family: monospace;
             font-size: 1rem;
-            min-width: 80px;
+            min-width: 60px;
             text-align: center;
+            opacity: 0.8;
+        }
+
+        /* --- WAVEFORM SCRUBBER --- */
+        .waveform-container {
+            width: 100%;
+            height: 60px; /* Taller for waveform */
+            position: relative;
             background: rgba(0,0,0,0.2);
-            padding: 6px 10px;
-            border-radius: 8px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            overflow: hidden;
+        }
+
+        canvas#waveformCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            opacity: 0;
+            transform: scaleY(0.5);
+            transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        canvas#waveformCanvas.loaded {
+            opacity: 1;
+            transform: scaleY(1);
+        }
+
+        /* Invisible Range Slider on top of Canvas */
+        input#mainScrubber {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            opacity: 0; /* Hidden visual, but clickable */
+            z-index: 2;
+            cursor: pointer;
+            -webkit-appearance: none;
+        }
+
+        /* Time Overlay on Waveform */
+        .waveform-time {
+            position: relative;
+            z-index: 0; /* Behind waveform, serves as placeholder */
+            font-size: 0.8rem;
+            opacity: 0.5;
+            pointer-events: none;
         }
 
         textarea {
@@ -259,7 +317,7 @@
             transition: all 0.15s ease-out;
             max-width: 800px;
             will-change: transform, color;
-            cursor: pointer; /* Changed to pointer */
+            cursor: pointer;
             border-radius: 8px;
             padding: 5px 15px;
         }
@@ -292,31 +350,6 @@
             width: 100%;
         }
 
-        /* Custom Range Slider */
-        input[type=range] {
-            -webkit-appearance: none;
-            width: 100%;
-            background: transparent;
-        }
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            height: 14px;
-            width: 14px;
-            border-radius: 50%;
-            background: #fff;
-            cursor: pointer;
-            margin-top: -5px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-        }
-        input[type=range]::-webkit-slider-runnable-track {
-            width: 100%;
-            height: 4px;
-            cursor: pointer;
-            background: rgba(255,255,255,0.2);
-            border-radius: 2px;
-        }
-        input[type=range]:focus { outline: none; }
-
         .preview-controls-row {
             display: flex;
             justify-content: center;
@@ -331,6 +364,30 @@
             opacity: 0.7;
             position: absolute;
             right: 0;
+        }
+
+        /* Simple Range for Preview */
+        input[id="previewScrubber"] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[id="previewScrubber"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 14px;
+            width: 14px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+            margin-top: -5px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        input[id="previewScrubber"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
         }
 
         /* Global Scrollbar */
@@ -372,7 +429,6 @@
                 <h1>GlassSync</h1>
                 <div class="file-meta-display" id="fileMeta">
                     <span class="meta-tag">📄 <span id="metaName">-</span></span>
-                    <span class="meta-tag">⏱ <span id="metaDuration">00:00</span></span>
                 </div>
             </div>
             <div style="display:flex; gap:10px;">
@@ -383,22 +439,34 @@
         </header>
 
         <div class="controls">
-            <div class="playback-group">
-                <button class="btn" onclick="document.getElementById('audioInput').click()">🎵 Upload MP3</button>
-                <input type="file" id="audioInput" accept="audio/*">
-                <button class="btn" id="loadLyricsBtn">📝 Load Lyrics</button>
+            <div class="controls-row">
+                <div class="playback-group">
+                    <button class="btn" onclick="document.getElementById('audioInput').click()">🎵 Upload MP3</button>
+                    <input type="file" id="audioInput" accept="audio/*">
+                    <button class="btn" id="loadLyricsBtn">📝 Load Lyrics</button>
+                </div>
             </div>
 
-            <div class="playback-group">
-                <button class="btn btn-nudge" id="nudgeBackBtn" title="Left Arrow">⏪ -0.1s</button>
-                <button class="btn btn-nudge" id="nudgeFwdBtn" title="Right Arrow">+0.1s ⏩</button>
-                <div class="time-display" id="timeDisplay">00:00.00</div>
+            <div class="waveform-container">
+                <div class="time-display" id="currentTimeDisplay" style="z-index:2; margin-right:10px;">00:00</div>
+                <div style="flex:1; position:relative; height:100%;">
+                    <canvas id="waveformCanvas"></canvas>
+                    <input type="range" id="mainScrubber" value="0" min="0" step="0.01">
+                </div>
+                <div class="time-display" id="totalTimeDisplay" style="z-index:2; margin-left:10px;">00:00</div>
             </div>
 
-            <div class="playback-group">
-                <button class="btn" id="prevLineBtn" title="Up Arrow">⬆️ Undo</button>
-                <button class="btn btn-primary" id="playBtn" title="Space">▶ Play</button>
-                <button class="btn btn-sync" id="nextLineBtn" title="Down Arrow">Sync Next ⬇</button>
+            <div class="controls-row">
+                <div class="playback-group">
+                    <button class="btn btn-nudge" id="nudgeBackBtn" title="Left Arrow">⏪ -0.1s</button>
+                    <button class="btn btn-nudge" id="nudgeFwdBtn" title="Right Arrow">+0.1s ⏩</button>
+                </div>
+
+                <div class="playback-group">
+                    <button class="btn" id="prevLineBtn" title="Up Arrow">⬆️ Undo</button>
+                    <button class="btn btn-primary" id="playBtn" title="Space">▶ Play</button>
+                    <button class="btn btn-sync" id="nextLineBtn" title="Down Arrow">Sync Next ⬇</button>
+                </div>
             </div>
         </div>
     </div>
@@ -453,6 +521,7 @@
     let previewMode = false;
     let currentFocusIndex = 0;
     let rAF;
+    let waveformData = null; // Store audio peaks
 
     // --- ELEMENTS ---
     const els = {
@@ -463,8 +532,13 @@
         editorPane: document.getElementById('editorPane'),
         syncPane: document.getElementById('syncPane'),
         playBtn: document.getElementById('playBtn'),
-        timeDisplay: document.getElementById('timeDisplay'),
         downloadBtn: document.getElementById('downloadBtn'),
+        
+        // Main Scrubber Elements
+        mainScrubber: document.getElementById('mainScrubber'),
+        currentTimeDisplay: document.getElementById('currentTimeDisplay'),
+        totalTimeDisplay: document.getElementById('totalTimeDisplay'),
+        waveformCanvas: document.getElementById('waveformCanvas'),
         
         // Preview Elements
         previewBtn: document.getElementById('previewBtn'),
@@ -477,12 +551,11 @@
         
         statusMsg: document.getElementById('statusMsg'),
         metaName: document.getElementById('metaName'),
-        metaDuration: document.getElementById('metaDuration'),
         fileMeta: document.getElementById('fileMeta')
     };
 
-    // --- 1. SETUP & AUDIO ---
-    els.audioInput.addEventListener('change', (e) => {
+    // --- 1. SETUP & AUDIO & WAVEFORM ---
+    els.audioInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if(!file) return;
         const url = URL.createObjectURL(file);
@@ -491,15 +564,78 @@
         els.metaName.innerText = file.name.length > 20 ? file.name.substring(0,20)+'...' : file.name;
         els.fileMeta.style.display = 'flex';
         
+        // Standard Audio Load
         audio.addEventListener('loadedmetadata', () => {
-            const m = Math.floor(audio.duration / 60);
-            const s = Math.floor(audio.duration % 60);
-            const totalStr = `${m}:${s.toString().padStart(2,'0')}`;
-            els.metaDuration.innerText = totalStr;
+            const totalStr = formatTime(audio.duration);
+            els.totalTimeDisplay.innerText = totalStr;
+            els.mainScrubber.max = audio.duration;
             els.previewScrubber.max = audio.duration;
-            showStatus("Audio Loaded");
+            showStatus("Loaded.");
         }, {once:true});
+
+        // GENERATE WAVEFORM
+        showStatus("Generating Waveform...");
+        const arrayBuffer = await file.arrayBuffer();
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        try {
+            const decodedAudio = await audioCtx.decodeAudioData(arrayBuffer);
+            generateWaveform(decodedAudio);
+        } catch (err) {
+            console.error("Waveform error", err);
+            showStatus("Waveform Error");
+        }
     });
+
+    function generateWaveform(audioBuffer) {
+        const rawData = audioBuffer.getChannelData(0); // Left channel
+        const samples = 1000; // Number of bars to draw
+        const blockSize = Math.floor(rawData.length / samples);
+        const data = [];
+        
+        for (let i = 0; i < samples; i++) {
+            let sum = 0;
+            for (let j = 0; j < blockSize; j++) {
+                sum += Math.abs(rawData[blockSize * i + j]);
+            }
+            data.push(sum / blockSize);
+        }
+        
+        // Normalize
+        const multiplier = Math.pow(Math.max(...data), -1);
+        waveformData = data.map(n => n * multiplier);
+        
+        // Draw Initial Static
+        drawWaveform(0);
+        els.waveformCanvas.classList.add('loaded');
+        showStatus("Ready to Sync!");
+    }
+
+    function drawWaveform(progressPct) {
+        if (!waveformData) return;
+        const cvs = els.waveformCanvas;
+        const ctx = cvs.getContext('2d');
+        const w = cvs.width = cvs.offsetWidth;
+        const h = cvs.height = cvs.offsetHeight;
+        
+        ctx.clearRect(0, 0, w, h);
+        
+        const barWidth = w / waveformData.length;
+        const progressX = w * progressPct;
+
+        waveformData.forEach((val, i) => {
+            const x = i * barWidth;
+            const barHeight = val * h * 0.8; // 80% height max
+            const y = (h - barHeight) / 2;
+            
+            // Color Logic: Blue before progress, Gray after
+            ctx.fillStyle = (x < progressX) ? '#0a84ff' : 'rgba(255,255,255,0.2)';
+            
+            // Draw rounded bar
+            ctx.beginPath();
+            ctx.roundRect(x, y, Math.max(1, barWidth - 1), barHeight, 2);
+            ctx.fill();
+        });
+    }
 
     // --- 2. LOAD LYRICS ---
     els.loadLyricsBtn.addEventListener('click', () => {
@@ -536,6 +672,8 @@
         els.previewBtn.disabled = true;
         els.downloadBtn.disabled = true;
         if(previewMode) closePreview();
+        els.waveformCanvas.classList.remove('loaded');
+        waveformData = null;
         showStatus("Reset");
     }
 
@@ -545,6 +683,7 @@
         els.fileMeta.style.display = 'none';
         els.rawLyrics.value = "";
         audio.src = "";
+        els.totalTimeDisplay.innerText = "00:00";
     });
 
     // --- 3. RENDER UI ---
@@ -679,7 +818,6 @@
             d.id = `k-${i}`;
             d.innerText = l.text;
             
-            // CLICK TO SEEK LOGIC
             d.addEventListener('click', () => {
                 if(l.start !== null) {
                     audio.currentTime = l.start;
@@ -704,11 +842,12 @@
     }
     els.closePreviewBtn.addEventListener('click', closePreview);
 
-    // Preview Controls
+    // Controls Logic
     els.previewPlayBtn.addEventListener('click', togglePlay);
-    els.previewScrubber.addEventListener('input', (e) => {
-        audio.currentTime = e.target.value;
-    });
+    
+    // Scrubber Interactions
+    els.previewScrubber.addEventListener('input', (e) => audio.currentTime = e.target.value);
+    els.mainScrubber.addEventListener('input', (e) => audio.currentTime = e.target.value);
 
     // Render Loop
     function previewLoop() {
@@ -741,7 +880,17 @@
     // --- 6. CONTROLS ---
     audio.addEventListener('timeupdate', () => {
         const t = audio.currentTime;
-        els.timeDisplay.innerText = formatTime(t);
+        els.currentTimeDisplay.innerText = formatTime(t);
+        
+        // Update main scrubber position
+        if(document.activeElement !== els.mainScrubber) {
+            els.mainScrubber.value = t;
+        }
+        
+        // Update Waveform Visual
+        if(waveformData && audio.duration > 0) {
+            drawWaveform(t / audio.duration);
+        }
     });
 
     document.getElementById('nextLineBtn').addEventListener('click', syncNext);
@@ -761,11 +910,8 @@
         const text = isPlaying ? "⏸ Pause" : "▶ Play";
         const bg = isPlaying ? "#ff3b30" : "var(--accent-color)";
         
-        // Update Main Button
         els.playBtn.innerText = text;
         els.playBtn.style.background = bg;
-        
-        // Update Preview Button
         els.previewPlayBtn.innerText = text;
         els.previewPlayBtn.style.background = bg;
     }
