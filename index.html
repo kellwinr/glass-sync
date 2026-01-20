@@ -1,16 +1,3 @@
-It looks like a "layout collision" is happening because the footer (buttons) is floating over the content instead of pushing it up. When you reach the bottom, the last few lines get hidden behind the controls, and the "black void" appears because the layout engine runs out of space.
-
-I have completely rebuilt the layout using a **"Vertical Stack"** structure.
-
-1. **Top (Header + Controls)**: Fixed at the top.
-2. **Middle (Lyrics)**: Takes up all remaining space and **scrolls independently**.
-3. **Bottom (Legend)**: Fixed at the bottom, separate from the lyrics.
-
-This guarantees the buttons **never** overlap the lyrics, and the layout won't break even if you have 1000 lines.
-
-### **Fixed Complete Code**
-
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -724,5 +711,3 @@ This guarantees the buttons **never** overlap the lyrics, and the layout won't b
 </script>
 </body>
 </html>
-
-```
