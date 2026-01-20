@@ -11,11 +11,12 @@
             --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
             --accent-color: #0a84ff;
             --danger-color: #ff453a;
-            --warning-color: #ff9f0a;
             --text-color: #ffffff;
             --active-line-bg: rgba(10, 132, 255, 0.6);
             --synced-line-bg: rgba(50, 215, 75, 0.15);
         }
+
+        * { box-sizing: border-box; }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -26,10 +27,10 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow: hidden;
+            overflow: hidden; /* Prevents whole page scroll */
         }
 
-        /* Glassmorphism Container */
+        /* --- MAIN CONTAINER LAYOUT --- */
         .glass-container {
             background: var(--glass-bg);
             backdrop-filter: blur(12px);
@@ -37,152 +38,128 @@
             border-radius: 20px;
             border: 1px solid var(--glass-border);
             box-shadow: var(--glass-shadow);
-            width: 90%;
+            width: 95%;
             max-width: 1000px;
             height: 90vh;
-            display: flex;
+            
+            /* Flex Column Layout: Header -> Workspace -> Footer */
+            display: flex; 
             flex-direction: column;
-            overflow: hidden;
+            overflow: hidden; /* Clips children to rounded corners */
             position: relative;
-            animation: fadeIn 0.8s ease-out;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Header */
-        header {
-            padding: 20px;
+        /* 1. TOP SECTION (Fixed) */
+        .top-section-wrapper {
+            flex: 0 0 auto; /* Never shrink or grow */
+            z-index: 20;
+            background: rgba(255, 255, 255, 0.05); /* Slight tint for separation */
             border-bottom: 1px solid var(--glass-border);
+        }
+
+        header {
+            padding: 15px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            z-index: 20;
-            flex-shrink: 0; /* Prevent header from shrinking */
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .header-left { display: flex; flex-direction: column; gap: 5px; }
-        .header-right { display: flex; gap: 10px; }
-
-        h1 { margin: 0; font-size: 1.2rem; font-weight: 600; letter-spacing: 0.5px; }
-
-        /* File Metadata Display */
-        .file-meta-display {
-            display: none;
-            font-size: 0.85rem;
-            background: rgba(0, 0, 0, 0.2);
-            padding: 6px 12px;
-            border-radius: 20px;
-            gap: 15px;
-            align-items: center;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        
-        .meta-tag {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            opacity: 0.9;
-        }
-
-        .meta-tag b { font-weight: 600; color: var(--accent-color); }
-
-        /* Controls Area */
         .controls {
-            padding: 20px;
-            display: grid;
-            grid-template-columns: 1fr auto;
-            gap: 20px;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.1);
-            z-index: 20;
-            flex-shrink: 0; /* Prevent controls from shrinking */
-        }
-
-        .file-inputs { display: flex; gap: 15px; align-items: center; }
-
-        input[type="file"] { display: none; }
-
-        .btn {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 12px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.2s ease;
-            backdrop-filter: blur(4px);
+            padding: 15px 20px;
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
-            gap: 8px;
-            min-width: 40px;
+            flex-wrap: wrap;
+            gap: 15px;
         }
 
-        .btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-1px);
-        }
-
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-        .btn-primary { background: var(--accent-color); border: none; font-weight: 500; }
-        .btn-primary:hover { background: #0071e3; }
-        
-        .btn-danger { background: rgba(255, 69, 58, 0.2); border-color: rgba(255, 69, 58, 0.5); }
-        .btn-danger:hover { background: rgba(255, 69, 58, 0.6); }
-
-        .btn-sync { background: #32d74b; border: none; color: #000; font-weight: 600; }
-        .btn-sync:hover { background: #28cd41; }
-
-        .btn-preview { background: rgba(172, 60, 222, 0.3); border: 1px solid rgba(172, 60, 222, 0.5); }
-        .btn-preview:hover { background: rgba(172, 60, 222, 0.6); }
-        
-        .btn-nudge {
-            background: rgba(255, 159, 10, 0.2);
-            border: 1px solid rgba(255, 159, 10, 0.4);
-            font-size: 0.8rem;
-            padding: 8px 12px;
-        }
-        .btn-nudge:hover { background: rgba(255, 159, 10, 0.5); }
-
-        /* Playback Controls */
-        .playback-bar {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            justify-content: center;
-        }
-
-        .time-display {
-            font-variant-numeric: tabular-nums;
-            font-size: 0.9rem;
-            opacity: 0.8;
-            min-width: 80px;
-            text-align: center;
-        }
-
-        /* Workspace */
+        /* 2. MIDDLE WORKSPACE (Scrolls) */
         .workspace {
-            display: flex;
-            flex: 1; /* This takes up all remaining space */
-            overflow: hidden;
+            flex: 1 1 auto; /* Takes all remaining height */
+            min-height: 0;  /* CRITICAL: Allows flex child to scroll */
             position: relative;
-            min-height: 0; /* Important for nested flex scrolling */
+            display: flex;
+            flex-direction: column;
         }
 
         .editor-pane, .preview-pane {
             flex: 1;
+            overflow-y: auto; /* Scrollbar appears here */
             padding: 20px;
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
+            scroll-behavior: smooth;
         }
 
-        .editor-pane { border-right: 1px solid var(--glass-border); }
+        /* 3. BOTTOM LEGEND (Fixed) */
+        .keyboard-legend {
+            flex: 0 0 auto; /* Fixed height at bottom */
+            padding: 12px 0;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.8);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 20;
+        }
+
+        /* --- UI COMPONENTS --- */
+        h1 { margin: 0; font-size: 1.2rem; font-weight: 600; }
+
+        .file-meta-display {
+            display: none; /* Hidden until loaded */
+            font-size: 0.85rem;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 4px 10px;
+            border-radius: 15px;
+            gap: 10px;
+            align-items: center;
+            margin-top: 5px;
+        }
+        .meta-tag { opacity: 0.9; }
+        .meta-tag b { color: var(--accent-color); font-weight: 600; }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn:hover { background: rgba(255, 255, 255, 0.25); transform: translateY(-1px); }
+        .btn:disabled { opacity: 0.5; cursor: default; transform: none; }
+        
+        .btn-primary { background: var(--accent-color); border: none; }
+        .btn-primary:hover { background: #0071e3; }
+        .btn-danger { background: rgba(255, 69, 58, 0.2); border-color: rgba(255, 69, 58, 0.5); }
+        .btn-danger:hover { background: rgba(255, 69, 58, 0.6); }
+        .btn-sync { background: #32d74b; border: none; color: #000; font-weight: 700; }
+        .btn-sync:hover { background: #28cd41; }
+        .btn-nudge { padding: 6px 10px; font-size: 0.8rem; background: rgba(255, 159, 10, 0.15); border-color: rgba(255, 159, 10, 0.3); }
+
+        .playback-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .time-display {
+            font-family: monospace;
+            font-size: 1rem;
+            min-width: 80px;
+            text-align: center;
+            background: rgba(0,0,0,0.2);
+            padding: 6px 10px;
+            border-radius: 8px;
+        }
 
         textarea {
             width: 100%;
@@ -190,721 +167,541 @@
             background: transparent;
             border: none;
             color: white;
-            font-size: 1rem;
+            font-size: 1.1rem;
+            line-height: 1.6;
             resize: none;
             outline: none;
-            line-height: 1.6;
         }
+        textarea::placeholder { color: rgba(255, 255, 255, 0.3); }
 
-        textarea::placeholder { color: rgba(255, 255, 255, 0.4); }
-
-        /* Sync Lines List */
+        /* --- LYRIC LINES --- */
         .sync-lines {
             display: flex;
             flex-direction: column;
             gap: 8px;
-            padding-bottom: 50px; /* Reduced padding since legend is no longer overlapping */
+            padding-bottom: 20px;
         }
 
         .line-item {
-            padding: 14px 18px;
-            border-radius: 12px;
-            background: rgba(255, 255, 255, 0.05);
-            cursor: pointer;
-            transition: all 0.2s ease;
-            border: 1px solid transparent;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            position: relative;
-            flex-shrink: 0;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.1s;
         }
-
+        .line-item:hover { background: rgba(255, 255, 255, 0.1); }
+        
         .line-item.current-focus {
             background: var(--active-line-bg);
-            border-color: rgba(255, 255, 255, 0.5);
-            transform: scale(1.02);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            z-index: 2;
-        }
-
-        .line-item.synced {
-            border-left: 4px solid #32d74b;
-            background: var(--synced-line-bg);
-            opacity: 0.7;
-        }
-
-        .line-text {
-            flex: 1;
-            margin-right: 15px;
-            outline: none;
-            border-bottom: 1px solid transparent;
-            transition: border 0.2s;
+            border-color: rgba(255,255,255,0.4);
+            transform: scale(1.01);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 5; /* Lift above others */
         }
         
-        .line-text:hover { border-bottom: 1px solid rgba(255,255,255,0.3); }
-        .line-text:focus {
-            border-bottom: 1px solid var(--accent-color);
-            background: rgba(0,0,0,0.1);
-            border-radius: 4px;
-            padding: 2px 4px;
-            margin-left: -4px;
+        .line-item.synced {
+            border-left: 4px solid #32d74b;
+            background: rgba(50, 215, 75, 0.1);
         }
 
-        /* Right Side Meta Group */
-        .line-meta-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
+        .line-text { flex: 1; outline: none; margin-right: 10px; }
+        .line-meta { display: flex; align-items: center; gap: 8px; }
+        
         .timestamp-tag {
             font-size: 0.75rem;
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(0,0,0,0.3);
             padding: 4px 8px;
-            border-radius: 6px;
-            opacity: 0.7;
-            user-select: none;
+            border-radius: 4px;
+            min-width: 50px;
+            text-align: center;
         }
-
-        .delete-line-btn {
-            background: transparent;
-            border: none;
-            color: rgba(255, 255, 255, 0.4);
-            font-size: 1.2rem;
-            cursor: pointer;
-            padding: 0 5px;
-            line-height: 1;
-            transition: color 0.2s;
+        
+        .del-btn {
+            background: none; border: none; color: rgba(255,255,255,0.3);
+            font-size: 1.2rem; cursor: pointer; padding: 0 4px;
         }
-        .delete-line-btn:hover { color: var(--danger-color); }
+        .del-btn:hover { color: var(--danger-color); }
 
-        /* PREVIEW OVERLAY (Karaoke Mode) */
+        /* --- PREVIEW OVERLAY (Fixed Layout) --- */
         .preview-overlay {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(10, 10, 20, 0.95);
-            backdrop-filter: blur(20px);
-            z-index: 100;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #0d0d16; /* Solid dark background */
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            transform: translateY(100%);
+            transition: transform 0.3s ease-in-out;
+        }
+        .preview-overlay.active { transform: translateY(0); }
+
+        .preview-scroll-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 60px 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start;
-            padding-top: 100px;
-            overflow-y: auto;
-            transform: translateY(100%);
-            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
-        }
-
-        .preview-overlay.active { transform: translateY(0); }
-
-        .preview-header {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 101;
-        }
-
-        .karaoke-container {
-            width: 80%;
-            max-width: 800px;
-            display: flex;
-            flex-direction: column;
-            gap: 30px;
-            text-align: center;
-            padding-bottom: 200px;
+            gap: 24px;
         }
 
         .karaoke-line {
-            font-size: 1.5rem;
-            color: rgba(255, 255, 255, 0.3);
-            transition: all 0.3s ease;
-            padding: 10px;
-            border-radius: 10px;
+            font-size: 1.4rem;
+            color: rgba(255,255,255,0.3);
+            text-align: center;
+            transition: all 0.3s;
+            max-width: 800px;
         }
-
         .karaoke-line.active {
             color: #fff;
-            font-weight: 700;
-            transform: scale(1.1);
-            text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
-            background: rgba(255, 255, 255, 0.05);
+            transform: scale(1.05);
+            text-shadow: 0 0 15px rgba(255,255,255,0.5);
         }
 
-        /* Scrollbar Styling */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.4); }
+        /* Fixed Close Button for Preview */
+        .preview-controls {
+            flex: 0 0 auto;
+            padding: 20px;
+            background: rgba(20, 20, 30, 0.9);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: flex-end;
+        }
 
-        /* Status & Tooltip */
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.4); }
+
+        .key-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 700;
+            margin-right: 4px;
+        }
+        
         .status-msg {
             position: absolute;
-            bottom: 60px;
+            bottom: 80px; /* Above legend */
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.6);
+            background: rgba(0,0,0,0.7);
             padding: 8px 16px;
             border-radius: 20px;
-            font-size: 0.85rem;
             pointer-events: none;
             opacity: 0;
             transition: opacity 0.3s;
-            z-index: 200;
-        }
-
-        /* Keyboard Legend - FIXED */
-        .keyboard-legend {
-            /* Removed absolute positioning */
-            width: 100%;
-            padding: 10px 0; /* Padding top/bottom */
-            background: rgba(0, 0, 0, 0.2);
-            backdrop-filter: blur(5px);
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            font-size: 0.75rem;
-            color: rgba(255, 255, 255, 0.6);
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            z-index: 20;
-            flex-shrink: 0; /* Ensure it stays fixed height at bottom */
-            box-sizing: border-box;
-        }
-        .key-badge {
-            background: rgba(255, 255, 255, 0.15);
-            padding: 2px 6px;
-            border-radius: 4px;
-            color: white;
-            font-weight: 600;
-            margin-right: 5px;
-        }
-        
-        .nudge-group {
-            display: flex;
-            gap: 5px;
-            margin-right: 10px;
-            border-right: 1px solid rgba(255,255,255,0.2);
-            padding-right: 10px;
+            z-index: 100;
         }
     </style>
 </head>
 <body>
 
 <div class="glass-container">
-    <header>
-        <div class="header-left">
-            <h1>GlassSync</h1>
-            <div class="file-meta-display" id="fileMeta">
-                <span class="meta-tag">📄 <span id="metaName">Song.mp3</span></span>
-                <span class="meta-tag">💿 <span id="metaFormat">MP3</span></span>
-                <span class="meta-tag">⏱ <span id="metaDuration">00:00</span></span>
+    
+    <div class="top-section-wrapper">
+        <header>
+            <div style="display:flex; flex-direction:column;">
+                <h1>GlassSync</h1>
+                <div class="file-meta-display" id="fileMeta">
+                    <span class="meta-tag">📄 <span id="metaName">-</span></span>
+                    <span class="meta-tag">⏱ <span id="metaDuration">00:00</span></span>
+                </div>
             </div>
-        </div>
-        <div class="header-right">
-            <button class="btn btn-preview" id="previewBtn" disabled>👁️ Preview</button>
-            <button class="btn btn-danger" id="fullResetBtn">🗑️ Clear All</button>
-            <button class="btn btn-primary" id="downloadBtn" disabled>Download SRT</button>
-        </div>
-    </header>
+            <div style="display:flex; gap:10px;">
+                <button class="btn" id="previewBtn" disabled>👁️ Preview</button>
+                <button class="btn btn-danger" id="fullResetBtn">🗑️ Clear</button>
+                <button class="btn btn-primary" id="downloadBtn" disabled>Download SRT</button>
+            </div>
+        </header>
 
-    <div class="preview-overlay" id="previewOverlay">
-        <div class="preview-header">
-            <button class="btn" id="closePreviewBtn">❌ Close Preview</button>
-        </div>
-        <div class="karaoke-container" id="karaokeContainer"></div>
-    </div>
-
-    <div class="controls">
-        <div class="top-controls">
-            <div class="file-inputs">
-                <button class="btn" onclick="document.getElementById('audioInput').click()">🎵 Upload Audio</button>
-                <input type="file" id="audioInput" accept="audio/mp3, audio/wav, audio/mpeg">
+        <div class="controls">
+            <div class="playback-group">
+                <button class="btn" onclick="document.getElementById('audioInput').click()">🎵 Upload MP3</button>
+                <input type="file" id="audioInput" accept="audio/*">
                 <button class="btn" id="loadLyricsBtn">📝 Load Lyrics</button>
             </div>
-        </div>
-        
-        <div class="playback-bar">
-            <div class="nudge-group">
-                <button class="btn btn-nudge" id="nudgeBackBtn" title="Shift timestamp back 0.1s (Arrow Left)">-0.1s</button>
-                <button class="btn btn-nudge" id="nudgeFwdBtn" title="Shift timestamp forward 0.1s (Arrow Right)">+0.1s</button>
+
+            <div class="playback-group">
+                <button class="btn btn-nudge" id="nudgeBackBtn" title="Left Arrow">⏪ -0.1s</button>
+                <button class="btn btn-nudge" id="nudgeFwdBtn" title="Right Arrow">+0.1s ⏩</button>
+                <div class="time-display" id="timeDisplay">00:00.00</div>
             </div>
 
-            <button class="btn" id="prevLineBtn" title="Previous Line (Arrow Up)">⬆️ Undo</button>
-            <button class="btn btn-primary" id="playBtn" title="Play/Pause (Space)">▶ Play</button>
-            <button class="btn btn-sync" id="nextLineBtn" title="Next Line (Arrow Down)">✅ Sync / Next</button>
-            <div class="time-display" id="timeDisplay">00:00.00</div>
+            <div class="playback-group">
+                <button class="btn" id="prevLineBtn" title="Up Arrow">⬆️ Undo</button>
+                <button class="btn btn-primary" id="playBtn" title="Space">▶ Play</button>
+                <button class="btn btn-sync" id="nextLineBtn" title="Down Arrow">Sync Next ⬇</button>
+            </div>
         </div>
     </div>
 
     <div class="workspace">
         <div class="editor-pane" id="editorPane">
-            <textarea id="rawLyrics" placeholder="1. Upload Audio&#10;2. Paste Lyrics Here&#10;3. Click 'Load Lyrics'&#10;4. Press Play&#10;5. Use Down Arrow to Sync, Left/Right to Fine-tune!"></textarea>
+            <textarea id="rawLyrics" placeholder="1. Upload MP3&#10;2. Paste Lyrics&#10;3. Click Load&#10;4. Press Play & Sync!"></textarea>
         </div>
 
         <div class="preview-pane" id="syncPane" style="display: none;">
             <div class="sync-lines" id="linesContainer"></div>
         </div>
+        
+        <div class="status-msg" id="statusMsg">Action!</div>
     </div>
-
-    <div class="status-msg" id="statusMsg">Synced!</div>
 
     <div class="keyboard-legend">
-        <span><span class="key-badge">Space</span> Play/Pause</span>
-        <span><span class="key-badge">⬇</span> Sync Next</span>
-        <span><span class="key-badge">⬆</span> Undo / First Line: Sync 0s</span>
-        <span><span class="key-badge">⬅ / ➡</span> -0.1s / +0.1s Adjustment</span>
+        <span><span class="key-badge">Space</span>Play/Pause</span>
+        <span><span class="key-badge">⬇</span>Sync</span>
+        <span><span class="key-badge">⬆</span>Undo</span>
+        <span><span class="key-badge">⬅➡</span>Adjust 0.1s</span>
     </div>
+
+    <div class="preview-overlay" id="previewOverlay">
+        <div class="preview-scroll-area" id="karaokeContainer">
+            </div>
+        <div class="preview-controls">
+            <button class="btn btn-danger" id="closePreviewBtn">❌ Close Preview</button>
+        </div>
+    </div>
+
 </div>
 
 <script>
-    // State Management
+    // --- STATE ---
     let audio = new Audio();
-    let lyrics = []; 
+    let lyrics = [];
     let isPlaying = false;
     let syncMode = false;
     let previewMode = false;
-    let currentFocusIndex = 0; 
+    let currentFocusIndex = 0;
 
-    // DOM Elements
-    const audioInput = document.getElementById('audioInput');
-    const rawLyrics = document.getElementById('rawLyrics');
-    const loadLyricsBtn = document.getElementById('loadLyricsBtn');
-    const fullResetBtn = document.getElementById('fullResetBtn');
-    const previewBtn = document.getElementById('previewBtn');
-    const closePreviewBtn = document.getElementById('closePreviewBtn');
-    
-    const editorPane = document.getElementById('editorPane');
-    const syncPane = document.getElementById('syncPane');
-    const linesContainer = document.getElementById('linesContainer');
-    const previewOverlay = document.getElementById('previewOverlay');
-    const karaokeContainer = document.getElementById('karaokeContainer');
-    
-    const playBtn = document.getElementById('playBtn');
-    const timeDisplay = document.getElementById('timeDisplay');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const prevLineBtn = document.getElementById('prevLineBtn');
-    const nextLineBtn = document.getElementById('nextLineBtn');
-    const statusMsg = document.getElementById('statusMsg');
-    
-    const nudgeBackBtn = document.getElementById('nudgeBackBtn');
-    const nudgeFwdBtn = document.getElementById('nudgeFwdBtn');
+    // --- ELEMENTS ---
+    const els = {
+        audioInput: document.getElementById('audioInput'),
+        rawLyrics: document.getElementById('rawLyrics'),
+        loadLyricsBtn: document.getElementById('loadLyricsBtn'),
+        linesContainer: document.getElementById('linesContainer'),
+        editorPane: document.getElementById('editorPane'),
+        syncPane: document.getElementById('syncPane'),
+        playBtn: document.getElementById('playBtn'),
+        timeDisplay: document.getElementById('timeDisplay'),
+        downloadBtn: document.getElementById('downloadBtn'),
+        previewBtn: document.getElementById('previewBtn'),
+        previewOverlay: document.getElementById('previewOverlay'),
+        karaokeContainer: document.getElementById('karaokeContainer'),
+        closePreviewBtn: document.getElementById('closePreviewBtn'),
+        statusMsg: document.getElementById('statusMsg'),
+        metaName: document.getElementById('metaName'),
+        metaDuration: document.getElementById('metaDuration'),
+        fileMeta: document.getElementById('fileMeta')
+    };
 
-    // Metadata
-    const fileMeta = document.getElementById('fileMeta');
-    const metaName = document.getElementById('metaName');
-    const metaFormat = document.getElementById('metaFormat');
-    const metaDuration = document.getElementById('metaDuration');
-
-    // 1. Audio Loading
-    audioInput.addEventListener('change', (e) => {
+    // --- 1. SETUP & AUDIO ---
+    els.audioInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
-        if (file) {
-            const url = URL.createObjectURL(file);
-            audio.src = url;
-            
-            metaName.innerText = file.name.length > 25 ? file.name.substring(0, 25) + '...' : file.name;
-            const extension = file.name.split('.').pop().toUpperCase();
-            metaFormat.innerText = extension;
-
-            audio.addEventListener('loadedmetadata', function() {
-                const duration = audio.duration;
-                const min = Math.floor(duration / 60);
-                const sec = Math.floor(duration % 60);
-                metaDuration.innerText = `${min}:${String(sec).padStart(2, '0')}`;
-                fileMeta.style.display = 'flex';
-                showStatus(`Loaded: ${file.name}`);
-            }, { once: true });
-        }
+        if(!file) return;
+        const url = URL.createObjectURL(file);
+        audio.src = url;
+        
+        els.metaName.innerText = file.name.length > 20 ? file.name.substring(0,20)+'...' : file.name;
+        els.fileMeta.style.display = 'flex';
+        
+        audio.addEventListener('loadedmetadata', () => {
+            const m = Math.floor(audio.duration / 60);
+            const s = Math.floor(audio.duration % 60);
+            els.metaDuration.innerText = `${m}:${s.toString().padStart(2,'0')}`;
+            showStatus("Audio Loaded");
+        }, {once:true});
     });
 
-    // 2. Lyrics Processing
-    loadLyricsBtn.addEventListener('click', () => {
-        if (syncMode) {
-            resetSyncState();
-            return;
-        }
+    // --- 2. LOAD LYRICS ---
+    els.loadLyricsBtn.addEventListener('click', () => {
+        if(syncMode) { resetAll(); return; } // Toggle Reset
 
-        const text = rawLyrics.value.trim();
-        if (!text) return alert("Please paste some lyrics first.");
-
-        const rawLines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
+        const text = els.rawLyrics.value.trim();
+        if(!text) return alert("Paste lyrics first!");
         
-        lyrics = rawLines.map((line, index) => ({
-            id: index,
-            text: line.trim(),
-            start: null,
-            end: null
+        lyrics = text.split(/\r\n|\n/).filter(l => l.trim()).map((l, i) => ({
+            id: i, text: l.trim(), start: null, end: null
         }));
 
         currentFocusIndex = 0;
-        renderSyncLines();
-        updateFocusUI();
+        renderSyncUI();
+        highlightLine(0);
         
-        editorPane.style.display = 'none';
-        syncPane.style.display = 'flex';
+        els.editorPane.style.display = 'none';
+        els.syncPane.style.display = 'block';
+        els.loadLyricsBtn.innerText = "🔄 Reset";
+        els.previewBtn.disabled = false;
         syncMode = true;
-        loadLyricsBtn.innerText = "🔄 Restart Sync";
-        previewBtn.disabled = false;
     });
 
-    // Full Reset
-    fullResetBtn.addEventListener('click', () => {
-        if(!confirm("Are you sure you want to clear the audio and lyrics?")) return;
-
-        audio.pause();
-        audio.src = "";
-        audioInput.value = ""; 
-        isPlaying = false;
-        
-        rawLyrics.value = "";
-        lyrics = [];
-        
-        fileMeta.style.display = 'none';
-        linesContainer.innerHTML = '';
-        editorPane.style.display = 'flex';
-        syncPane.style.display = 'none';
+    function resetAll() {
+        if(!confirm("Reset everything?")) return;
+        audio.pause(); audio.currentTime = 0; isPlaying = false;
+        updatePlayBtn();
         syncMode = false;
-        loadLyricsBtn.innerText = "📝 Load Lyrics";
-        downloadBtn.disabled = true;
-        previewBtn.disabled = true;
-        updatePlayButton();
-        timeDisplay.innerText = "00:00.00";
-        
-        if(previewMode) closePreview();
-        
-        showStatus("Cleared All!");
-    });
-
-    function resetSyncState() {
-        audio.pause();
-        audio.currentTime = 0;
-        isPlaying = false;
-        updatePlayButton();
-        timeDisplay.innerText = "00:00.00";
-        
-        currentFocusIndex = 0;
-        lyrics.forEach(l => { l.start = null; l.end = null; });
-        
-        renderSyncLines();
-        updateFocusUI();
-        showStatus("Restarted!");
+        lyrics = [];
+        els.linesContainer.innerHTML = '';
+        els.editorPane.style.display = 'block';
+        els.syncPane.style.display = 'none';
+        els.loadLyricsBtn.innerText = "📝 Load Lyrics";
+        els.previewBtn.disabled = true;
+        els.downloadBtn.disabled = true;
+        showStatus("Reset");
     }
 
-    // 3. Render Editor Interface
-    function renderSyncLines() {
-        linesContainer.innerHTML = '';
-        lyrics.forEach((line, index) => {
+    document.getElementById('fullResetBtn').addEventListener('click', () => {
+        resetAll();
+        els.audioInput.value = "";
+        els.fileMeta.style.display = 'none';
+        els.rawLyrics.value = "";
+        audio.src = "";
+    });
+
+    // --- 3. RENDER UI ---
+    function renderSyncUI() {
+        els.linesContainer.innerHTML = '';
+        lyrics.forEach((line, i) => {
             const div = document.createElement('div');
             div.className = 'line-item';
-            div.id = `line-${index}`;
-            
+            div.id = `line-${i}`;
             div.innerHTML = `
-                <span class="line-text" contenteditable="true" id="text-${index}">${line.text}</span>
-                <div class="line-meta-group">
-                    <span class="timestamp-tag" id="time-${index}">--:--</span>
-                    <button class="delete-line-btn" title="Delete this line">×</button>
+                <div class="line-text" contenteditable="true">${line.text}</div>
+                <div class="line-meta">
+                    <span class="timestamp-tag" id="time-${i}">--:--</span>
+                    <button class="del-btn" title="Delete Line">×</button>
                 </div>
             `;
             
-            div.addEventListener('click', (e) => {
-                if (e.target.classList.contains('line-text') || e.target.classList.contains('delete-line-btn')) return;
-                
-                currentFocusIndex = index;
-                updateFocusUI();
-                if(lyrics[index].start !== null) {
-                    audio.currentTime = lyrics[index].start;
-                }
-            });
+            // Edit Text
+            div.querySelector('.line-text').addEventListener('input', (e) => lyrics[i].text = e.target.innerText);
+            div.querySelector('.line-text').addEventListener('keydown', (e) => e.stopPropagation()); // Allow typing space
 
-            const textSpan = div.querySelector('.line-text');
-            textSpan.addEventListener('input', (e) => {
-                lyrics[index].text = e.target.innerText;
-            });
-            textSpan.addEventListener('keydown', (e) => { e.stopPropagation(); });
-
-            const delBtn = div.querySelector('.delete-line-btn');
-            delBtn.addEventListener('click', (e) => {
+            // Delete Line
+            div.querySelector('.del-btn').addEventListener('click', (e) => {
                 e.stopPropagation();
-                deleteLine(index);
+                deleteLine(i);
             });
-            
-            linesContainer.appendChild(div);
+
+            // Set Focus
+            div.addEventListener('click', (e) => {
+                if(e.target.className.includes('line-text')) return;
+                currentFocusIndex = i;
+                highlightLine(i);
+                if(lyrics[i].start !== null) audio.currentTime = lyrics[i].start;
+            });
+
+            els.linesContainer.appendChild(div);
         });
     }
 
-    function deleteLine(index) {
-        lyrics.splice(index, 1);
-        if (index < currentFocusIndex) {
-            currentFocusIndex--;
-        } else if (index === currentFocusIndex) {
-            if (currentFocusIndex >= lyrics.length) {
-                currentFocusIndex = Math.max(0, lyrics.length - 1);
-            }
-        }
-        renderSyncLines();
-        updateFocusUI();
-        if(lyrics.length === 0) downloadBtn.disabled = true;
-    }
-
-    function updateFocusUI() {
+    function highlightLine(idx) {
         document.querySelectorAll('.line-item').forEach(el => el.classList.remove('current-focus'));
-        
-        if (currentFocusIndex < lyrics.length && lyrics.length > 0) {
-            const el = document.getElementById(`line-${currentFocusIndex}`);
-            if (el) {
-                el.classList.add('current-focus');
-                el.scrollIntoView({ behavior: "smooth", block: "center" });
+        const el = document.getElementById(`line-${idx}`);
+        if(el) {
+            el.classList.add('current-focus');
+            el.scrollIntoView({behavior: "smooth", block: "center"});
+        }
+    }
+
+    function updateLineStatus(idx) {
+        const el = document.getElementById(`line-${idx}`);
+        const timeEl = document.getElementById(`time-${idx}`);
+        if(el && timeEl) {
+            if(lyrics[idx].start !== null) {
+                el.classList.add('synced');
+                timeEl.innerText = formatTime(lyrics[idx].start);
+            } else {
+                el.classList.remove('synced');
+                timeEl.innerText = "--:--";
             }
         }
-        
-        lyrics.forEach((line, idx) => {
-            if (line.start !== null) updateLineVisuals(idx);
-        });
     }
 
-    // 4. Preview Logic
-    previewBtn.addEventListener('click', openPreview);
-    closePreviewBtn.addEventListener('click', closePreview);
-
-    function openPreview() {
-        previewMode = true;
-        karaokeContainer.innerHTML = '';
-        lyrics.forEach((line, index) => {
-            const div = document.createElement('div');
-            div.className = 'karaoke-line';
-            div.id = `k-line-${index}`;
-            div.innerText = line.text;
-            karaokeContainer.appendChild(div);
-        });
-        previewOverlay.classList.add('active');
+    function deleteLine(idx) {
+        lyrics.splice(idx, 1);
+        if(currentFocusIndex >= lyrics.length) currentFocusIndex = Math.max(0, lyrics.length - 1);
+        renderSyncUI();
+        highlightLine(currentFocusIndex);
+        // Restore synced visuals
+        lyrics.forEach((l, i) => { if(l.start !== null) updateLineStatus(i); });
     }
 
-    function closePreview() {
-        previewMode = false;
-        previewOverlay.classList.remove('active');
-    }
+    // --- 4. CORE LOGIC ---
+    function syncNext() {
+        if(!audio.src) return alert("Upload audio first");
+        if(currentFocusIndex >= lyrics.length) return;
 
-    // 5. Sync Logic
-    function triggerSyncNext() {
-        if (!audio.src) return alert("Please upload an MP3 first.");
-        
-        if (!isPlaying && lyrics[currentFocusIndex]?.start === null) {
-             audio.play();
-             isPlaying = true;
-             updatePlayButton();
+        // Auto Play on first sync
+        if(!isPlaying && lyrics[currentFocusIndex].start === null) {
+            audio.play(); isPlaying = true; updatePlayBtn();
         }
 
-        if (currentFocusIndex >= lyrics.length) return;
-
-        const currentTime = audio.currentTime;
-        lyrics[currentFocusIndex].start = currentTime;
-
-        if (currentFocusIndex > 0 && lyrics[currentFocusIndex - 1].start !== null) {
-            lyrics[currentFocusIndex - 1].end = currentTime;
+        const t = audio.currentTime;
+        lyrics[currentFocusIndex].start = t;
+        
+        // Close previous line
+        if(currentFocusIndex > 0 && lyrics[currentFocusIndex-1].start !== null) {
+            lyrics[currentFocusIndex-1].end = t;
         }
 
-        updateLineVisuals(currentFocusIndex);
+        updateLineStatus(currentFocusIndex);
         currentFocusIndex++;
-        updateFocusUI();
-
-        downloadBtn.disabled = false;
+        highlightLine(currentFocusIndex);
+        
+        els.downloadBtn.disabled = false;
         showStatus("Synced! ⬇");
     }
 
-    // Undo / First Line Logic
-    function triggerUndoPrev() {
-        // SPECIAL CASE: First Line -> Sync to 0s
-        if (currentFocusIndex === 0) {
-             lyrics[0].start = 0;
-             audio.currentTime = 0;
-             updateLineVisuals(0);
-             currentFocusIndex = 1; 
-             updateFocusUI();
-             showStatus("Synced 0s!");
-             return;
+    function undoPrev() {
+        // SPECIAL: First line -> 0s
+        if(currentFocusIndex === 0) {
+            lyrics[0].start = 0;
+            audio.currentTime = 0;
+            updateLineStatus(0);
+            currentFocusIndex = 1;
+            highlightLine(1);
+            showStatus("Synced 0s");
+            return;
         }
 
-        // STANDARD CASE: Undo
-        if (currentFocusIndex > 0) {
-            currentFocusIndex--; 
-
-            const line = lyrics[currentFocusIndex];
-            if (line.start !== null) {
-                audio.currentTime = line.start;
-            }
-
-            // Wipe Data
-            line.start = null;
-            line.end = null;
-
-            // Reset Visuals
-            const lineEl = document.getElementById(`line-${currentFocusIndex}`);
-            const timeEl = document.getElementById(`time-${currentFocusIndex}`);
-            if (lineEl) lineEl.classList.remove('synced');
-            if (timeEl) timeEl.innerText = "--:--";
-
-            updateFocusUI();
-            showStatus("Undone & Rewound ↺");
+        // Normal Undo
+        if(currentFocusIndex > 0) {
+            currentFocusIndex--;
+            const l = lyrics[currentFocusIndex];
+            if(l.start !== null) audio.currentTime = l.start;
+            
+            l.start = null; l.end = null;
+            updateLineStatus(currentFocusIndex);
+            highlightLine(currentFocusIndex);
+            showStatus("Undo ↺");
         }
     }
-    
-    function nudgeTimestamp(amount) {
+
+    function nudge(amount) {
         if(currentFocusIndex >= lyrics.length) return;
-        const line = lyrics[currentFocusIndex];
-        
-        if(line.start !== null) {
-            line.start = Math.max(0, line.start + amount);
-            if (currentFocusIndex > 0 && lyrics[currentFocusIndex - 1].start !== null) {
-                lyrics[currentFocusIndex - 1].end = line.start;
+        const l = lyrics[currentFocusIndex];
+        if(l.start !== null) {
+            l.start = Math.max(0, l.start + amount);
+            // Adjust prev end
+            if(currentFocusIndex > 0 && lyrics[currentFocusIndex-1].start !== null) {
+                lyrics[currentFocusIndex-1].end = l.start;
             }
-            audio.currentTime = line.start;
-            updateLineVisuals(currentFocusIndex);
-            showStatus(amount > 0 ? "+0.1s ➡" : "⬅ -0.1s");
-        } else {
-            showStatus("Sync line first!");
+            audio.currentTime = l.start; // JUMP AUDIO
+            updateLineStatus(currentFocusIndex);
+            showStatus(amount > 0 ? "+0.1s" : "-0.1s");
         }
     }
 
-    function updateLineVisuals(index) {
-        const lineEl = document.getElementById(`line-${index}`);
-        const timeEl = document.getElementById(`time-${index}`);
-        if(lineEl && timeEl) {
-            lineEl.classList.add('synced');
-            timeEl.innerText = formatTimeDisplay(lyrics[index].start);
-        }
-    }
-
-    // 6. Controls & Playback
-    nextLineBtn.addEventListener('click', triggerSyncNext);
-    prevLineBtn.addEventListener('click', triggerUndoPrev);
-    nudgeBackBtn.addEventListener('click', () => nudgeTimestamp(-0.1));
-    nudgeFwdBtn.addEventListener('click', () => nudgeTimestamp(0.1));
-
-    playBtn.addEventListener('click', () => {
-        if (isPlaying) {
-            audio.pause();
-            isPlaying = false;
-        } else {
-            audio.play();
-            isPlaying = true;
-        }
-        updatePlayButton();
+    // --- 5. PREVIEW MODE ---
+    els.previewBtn.addEventListener('click', () => {
+        previewMode = true;
+        els.karaokeContainer.innerHTML = '';
+        lyrics.forEach((l, i) => {
+            const d = document.createElement('div');
+            d.className = 'karaoke-line';
+            d.id = `k-${i}`;
+            d.innerText = l.text;
+            els.karaokeContainer.appendChild(d);
+        });
+        els.previewOverlay.classList.add('active');
     });
 
-    function updatePlayButton() {
-        if(isPlaying) {
-            playBtn.innerText = "⏸ Pause";
-            playBtn.style.background = "#ff3b30";
-        } else {
-            playBtn.innerText = "▶ Play";
-            playBtn.style.background = "var(--accent-color)";
-        }
-    }
+    els.closePreviewBtn.addEventListener('click', () => {
+        previewMode = false;
+        els.previewOverlay.classList.remove('active');
+    });
 
+    // --- 6. LOOPS & CONTROLS ---
     audio.addEventListener('timeupdate', () => {
-        const ct = audio.currentTime;
-        timeDisplay.innerText = formatTimeDisplay(ct);
+        const t = audio.currentTime;
+        els.timeDisplay.innerText = formatTime(t);
 
-        if (previewMode) {
-            lyrics.forEach((line, index) => {
-                const kLine = document.getElementById(`k-line-${index}`);
-                if (!kLine) return;
-                
-                const isStarted = line.start !== null && ct >= line.start;
-                const nextLine = lyrics[index + 1];
-                const isEnded = nextLine && nextLine.start !== null ? ct >= nextLine.start : false;
-
-                if (isStarted && !isEnded) {
-                    if (!kLine.classList.contains('active')) {
-                        document.querySelectorAll('.karaoke-line').forEach(el => el.classList.remove('active'));
-                        kLine.classList.add('active');
-                        kLine.scrollIntoView({ behavior: "smooth", block: "center" });
+        if(previewMode) {
+            lyrics.forEach((l, i) => {
+                const k = document.getElementById(`k-${i}`);
+                if(!k) return;
+                // Active if time >= start AND (time < next_start OR no next)
+                const nextStart = (i < lyrics.length - 1 && lyrics[i+1].start) ? lyrics[i+1].start : 99999;
+                if(l.start !== null && t >= l.start && t < nextStart) {
+                    if(!k.classList.contains('active')) {
+                        document.querySelectorAll('.karaoke-line').forEach(e => e.classList.remove('active'));
+                        k.classList.add('active');
+                        k.scrollIntoView({behavior: "smooth", block: "center"});
                     }
                 }
             });
         }
     });
 
-    // 7. Keyboard
-    document.addEventListener('keydown', (e) => {
-        if (e.target.isContentEditable) return;
-        if (!syncMode) return;
+    document.getElementById('nextLineBtn').addEventListener('click', syncNext);
+    document.getElementById('prevLineBtn').addEventListener('click', undoPrev);
+    document.getElementById('nudgeBackBtn').addEventListener('click', () => nudge(-0.1));
+    document.getElementById('nudgeFwdBtn').addEventListener('click', () => nudge(0.1));
+    
+    els.playBtn.addEventListener('click', togglePlay);
+    function togglePlay() {
+        if(isPlaying) { audio.pause(); } else { audio.play(); }
+        isPlaying = !isPlaying;
+        updatePlayBtn();
+    }
+    function updatePlayBtn() {
+        els.playBtn.innerText = isPlaying ? "⏸ Pause" : "▶ Play";
+        els.playBtn.style.background = isPlaying ? "#ff3b30" : "var(--accent-color)";
+    }
 
-        if (e.code === 'Space') {
-            e.preventDefault();
-            playBtn.click();
-        }
-        if (e.code === 'ArrowDown') {
-            e.preventDefault();
-            triggerSyncNext();
-        }
-        if (e.code === 'ArrowUp') {
-            e.preventDefault();
-            triggerUndoPrev();
-        }
-        if (e.code === 'ArrowLeft') {
-            e.preventDefault();
-            nudgeTimestamp(-0.1);
-        }
-        if (e.code === 'ArrowRight') {
-            e.preventDefault();
-            nudgeTimestamp(0.1);
+    // Keyboard
+    document.addEventListener('keydown', (e) => {
+        if(e.target.isContentEditable) return;
+        if(!syncMode) return;
+        
+        switch(e.code) {
+            case 'Space': e.preventDefault(); togglePlay(); break;
+            case 'ArrowDown': e.preventDefault(); syncNext(); break;
+            case 'ArrowUp': e.preventDefault(); undoPrev(); break;
+            case 'ArrowLeft': e.preventDefault(); nudge(-0.1); break;
+            case 'ArrowRight': e.preventDefault(); nudge(0.1); break;
         }
     });
 
-    // 8. SRT Download
-    downloadBtn.addEventListener('click', () => {
-        let srtContent = "";
-        let counter = 1;
-
-        lyrics.forEach((line, index) => {
-            if (line.start === null) return; 
-            const start = line.start;
-            const end = line.end !== null ? line.end : (line.start + 3);
-
-            srtContent += `${counter}\n`;
-            srtContent += `${formatSrtTime(start)} --> ${formatSrtTime(end)}\n`;
-            srtContent += `${line.text}\n\n`;
-            counter++;
+    // Download SRT
+    els.downloadBtn.addEventListener('click', () => {
+        let txt = "";
+        lyrics.forEach((l, i) => {
+            if(l.start === null) return;
+            const end = l.end ? l.end : l.start + 3;
+            txt += `${i+1}\n${formatSRT(l.start)} --> ${formatSRT(end)}\n${l.text}\n\n`;
         });
-
-        const blob = new Blob([srtContent], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
+        const blob = new Blob([txt], {type:'text/plain'});
         const a = document.createElement('a');
-        a.href = url;
+        a.href = URL.createObjectURL(blob);
         a.download = 'lyrics.srt';
         a.click();
-        URL.revokeObjectURL(url);
     });
 
-    function formatTimeDisplay(seconds) {
-        if (seconds === null) return "--:--";
-        const min = Math.floor(seconds / 60);
-        const sec = Math.floor(seconds % 60);
-        const ms = Math.floor((seconds % 1) * 100);
-        return `${pad(min)}:${pad(sec)}.${pad(ms)}`;
+    // Utils
+    function formatTime(s) {
+        const ms = Math.floor((s % 1) * 100);
+        const sec = Math.floor(s % 60);
+        const min = Math.floor(s / 60);
+        return `${min.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}.${ms.toString().padStart(2,'0')}`;
     }
-
-    function formatSrtTime(seconds) {
-        const date = new Date(0, 0, 0, 0, 0, 0, seconds * 1000);
-        const hours = pad(date.getHours());
-        const minutes = pad(date.getMinutes());
-        const secs = pad(date.getSeconds());
-        const ms = String(date.getMilliseconds()).padStart(3, '0');
-        return `${hours}:${minutes}:${secs},${ms}`;
+    function formatSRT(s) {
+        const d = new Date(s * 1000);
+        const ms = d.getMilliseconds().toString().padStart(3,'0');
+        return d.toISOString().substr(11, 8).replace('.',',') + ',' + ms; 
     }
-
-    function pad(num) { return String(num).padStart(2, '0'); }
-
     function showStatus(msg) {
-        statusMsg.innerText = msg;
-        statusMsg.style.opacity = '1';
-        setTimeout(() => { statusMsg.style.opacity = '0'; }, 1000);
+        els.statusMsg.innerText = msg;
+        els.statusMsg.style.opacity = 1;
+        setTimeout(() => els.statusMsg.style.opacity = 0, 1000);
     }
-</script>
 
+</script>
 </body>
 </html>
